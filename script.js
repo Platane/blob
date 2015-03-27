@@ -76,7 +76,7 @@ var valueFn = function(x,y){
 
 
 
-
+var cycle
 ;(function(){
 
 var sin = function( c, A, w, phy, t ){
@@ -100,8 +100,10 @@ var posFn = blob.map( function(){
     }
 })
 
+
+
 var t = 0
-;(function cycle(){
+cycle = function(){
 
     t++
 
@@ -111,9 +113,37 @@ var t = 0
         blob[ i ].y = p.y
     }
 
+    stats.begin()
     draw( 200, 200, valueFn )
+    stats.end()
 
     window.requestAnimationFrame( cycle )
-})()
+}
 
 })()
+
+
+
+
+var stats
+window.onload = function(){
+
+    if( window.Stats ){
+        stats = new Stats();
+
+        stats.domElement.style.position = 'absolute';
+        stats.domElement.style.right = '0px';
+        stats.domElement.style.bottom = '0px';
+
+        document.body.appendChild( stats.domElement );
+    } else {
+
+        // mock
+        stats = {
+            begin: function(){},
+            end: function(){},
+        }
+    }
+
+    cycle()
+}
