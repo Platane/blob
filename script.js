@@ -26,15 +26,14 @@ var blob = [
 
 
 
-var valueAt
-;(function(){
-
-//var gaussFn = blob.map(function( u ){ return gauss.bind( u.x, u.y, u.tau ) })
-valueAt = function(x,y){
-    return blob.reduce( function( v, u ){ return v + gauss( u.x, u.y, u.tau, x, y) }, 0 )
+var valueAt=  function(x,y){
+    var v = 0
+    for( var i = blob.length; i--; ){
+        var u = blob[ i ]
+        v += gauss( u.x, u.y, u.tau, x, y)
+    }
+    return v
 }
-
-})()
 
 
 
