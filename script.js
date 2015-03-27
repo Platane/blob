@@ -128,6 +128,17 @@ cycle = function(){
 var stats
 window.onload = function(){
 
+    var domE = document.createElement('span')
+    domE.style.position = 'absolute';
+    domE.style.right = '0px';
+    domE.style.bottom = '50px';
+
+    document.body.appendChild( domE );
+
+    var displaySize = function(){
+        domE.innerHTML = window.innerWidth+' x '+window.innerHeight
+    }
+
     if( window.Stats ){
         stats = new Stats();
 
@@ -136,11 +147,17 @@ window.onload = function(){
         stats.domElement.style.bottom = '0px';
 
         document.body.appendChild( stats.domElement );
+
+        var _begin = stats.begin
+        stats.begin = function(){
+            displaySize()
+            _begin.call( this )
+        }
     } else {
 
         // mock
         stats = {
-            begin: function(){},
+            begin: function(){ displaySize() },
             end: function(){},
         }
     }
