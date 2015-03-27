@@ -1,0 +1,119 @@
+
+var gauss
+;(function(){
+
+var k = Math.sqrt( 2*Math.PI )
+gauss = function( cx, cy, tau, x, y ){
+
+    var xx = ( cx - x )/tau
+    var yy = ( cy - y )/tau
+
+    return Math.exp( -0.5 * ( xx*xx + yy*yy )  )
+
+}
+
+})()
+
+
+
+
+var blob = [
+    {x: 100, y: 100, tau:30},
+    {x: 150, y: 150, tau:30},
+    {x: 20, y: 50, tau:20},
+]
+
+
+
+
+var valueAt
+;(function(){
+
+//var gaussFn = blob.map(function( u ){ return gauss.bind( u.x, u.y, u.tau ) })
+valueAt = function(x,y){
+    return blob.reduce( function( v, u ){ return v + gauss( u.x, u.y, u.tau, x, y) }, 0 )
+}
+
+})()
+
+
+
+var canvas = document.createElement( 'canvas' )
+document.body.appendChild( canvas )
+var ctx = canvas.getContext( '2d' )
+var draw = function( maxW, maxH, fnValue ){
+
+    var w = canvas.width = window.innerWidth
+    var h = canvas.height = window.innerHeight
+
+    var r = Math.max( maxW/w , maxH/h )
+
+    var imgData = ctx.getImageData( 0, 0, w, h )
+    var arr = imgData.data
+
+
+    var x, y, e, k
+    for(var i = w; i-- ;)
+    for(var j = h; j-- ;)
+    {
+        x = i * r
+        y = j * r
+
+        k = (i*w + j)<<2
+
+        e = fnValue( x, y )
+
+        arr[ k ] = arr[ k+1 ] = arr[ k+2 ] = 0|(e * 255)
+        arr[ k+3 ] = 255
+    }
+
+    ctx.putImageData( imgData, 0, 0 )
+}
+
+var valueFn = function(x,y){
+    return valueAt( x,y ) < 0.5  ? 1 : 0
+}
+
+
+
+
+;(function(){
+
+var sin = function( c, A, w, phy, t ){
+    return c + A * Math.sin( w * t + phy )
+}
+
+var rand = function( a, b ){
+    return Math.random() * ( b-a ) + a
+}
+
+var posFn = blob.map( function(){
+
+    var fx = sin.bind( null, rand( 50, 150 ), rand( 10, 80 ), rand( 0.01, 0.06 ), rand(0, 6.28)  )
+    var fy = sin.bind( null, rand( 50, 150 ), rand( 10, 80 ), rand( 0.01, 0.06 ), rand(0, 6.28)  )
+
+    return function( t ){
+        return {
+            x: fx( t ),
+            y: fy( t )
+        }
+    }
+})
+
+var t = 0
+;(function cycle(){
+
+    t++
+
+    for( var i = blob.length; i--; ){
+        var p = posFn[ i ]( t )
+        blob[ i ].x = p.x
+        blob[ i ].y = p.y
+    }
+
+    draw( 200, 200, valueFn )
+
+    window.requestAnimationFrame( cycle )
+})()
+
+})()
