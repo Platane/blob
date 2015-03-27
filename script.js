@@ -5,11 +5,17 @@ var gauss
 var k = Math.sqrt( 2*Math.PI )
 gauss = function( cx, cy, tau, x, y ){
 
-    var xx = ( cx - x )/tau
-    var yy = ( cy - y )/tau
+    var xx = cx - x
+    var yy = cy - y
 
-    return Math.exp( -0.5 * ( xx*xx + yy*yy )  )
+    var d = ( xx*xx + yy*yy ) / ( tau * tau )
 
+    if ( d > 9 )
+        return 0
+    else if ( d < 1.4 )
+        return 1
+    else
+        return Math.exp( -0.5 * d  )
 }
 
 })()
