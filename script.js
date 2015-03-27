@@ -45,7 +45,7 @@ var draw
     var canvas = document.createElement( 'canvas' )
     document.body.appendChild( canvas )
     var ctx = canvas.getContext( '2d' )
-    var draw = function( maxW, maxH, fnValue ){
+    draw = function( maxW, maxH, fnValue ){
 
         var w = canvas.width = 300
         var h = canvas.height = 300
