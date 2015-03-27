@@ -10,7 +10,7 @@ gauss = function( cx, cy, tau, x, y ){
 
     var d = ( xx*xx + yy*yy ) / ( tau * tau )
 
-    if ( d > 9 )
+    if ( d > 10 )
         return 0
     else if ( d < 1.4 )
         return 1
@@ -48,8 +48,11 @@ document.body.appendChild( canvas )
 var ctx = canvas.getContext( '2d' )
 var draw = function( maxW, maxH, fnValue ){
 
-    var w = canvas.width = window.innerWidth
-    var h = canvas.height = window.innerHeight
+    var w = canvas.width = 300
+    var h = canvas.height = 300
+
+    canvas.style.width = window.innerWidth+'px'
+    canvas.style.height = window.innerHeight+'px'
 
     var r = Math.max( maxW/w , maxH/h )
 
