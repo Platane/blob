@@ -5,5 +5,119 @@
 
 </body>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/stats.js/r11/Stats.min.js"></script>
-<script src="script.js"></script>
+<script>
+
+
+var sticks = [
+    {
+        cx: 0.5,
+        blob:[
+            { tau: 0.04, cy: 0.5, l:0 },
+            { tau: 0.04, cy: 0.2, l:0 },
+            { tau: 0.04, cy: 0.8, l:0 },
+            { tau: 0.04, cy: 0.6, l:0 },
+        ]
+    }
+]
+
+
+var gauss = function( cx, tau, l, x ){
+
+    var xx = cx - x
+
+    if( Math.abs( xx ) <= l ){
+
+        return 1
+
+    } else {
+
+        xx += - ( Math.abs( xx ) / xx ) * l
+
+        var d = ( xx*xx ) / ( tau * tau )
+
+        return Math.exp( -0.5 * d )
+    }
+}
+
+var computeStick = function( blob, l ){
+
+    var out = []
+
+    var s, sum
+
+    for( var k=l ; k-- ; ){
+
+        s = k/l
+        sum = 0
+
+        for( j= blob.length ; j-- ; ){
+
+            sum += gauss( blob[ j ].cy, blob[ j ].tau, blob[ j ].l, s )
+
+        }
+
+        out.push( Math.min( 1, sum ) )
+    }
+
+    return out
+}
+
+
+
+
+
+
+var canvas = document.createElement( 'canvas' )
+document.body.appendChild( canvas )
+var ctx = canvas.getContext( '2d' )
+var draw = function(  ){
+
+
+
+    var w = canvas.width = 400
+    var h = canvas.height = 600
+
+    ctx.clearRect( 0, 0, w, h )
+
+
+    for(var k = sticks.length; k-- ;){
+
+        var x = sticks[ k ].cx * w
+
+        var band = computeStick( sticks[ k ].blob, h )
+
+        for(var i = h; i-- ;){
+
+            var l = Math.pow( band[ i ] , 2 ) * 40
+            //l = 40
+
+            ctx.beginPath()
+            ctx.rect( x-l/2, i, l , 1 )
+            //ctx.globalAlpha = band[ i ]
+            ctx.fill()
+
+        }
+    }
+}
+
+
+
+var t = 0
+cycle = function(){
+
+    t++
+
+    //sticks[ 0 ].blob[ 0 ].l = Math.sin( t * 0.07 ) * 0.1 + 0.1
+    sticks[ 0 ].blob[ 0 ].cy = Math.sin( t * 0.07 ) * 0.1 + 0.5
+
+    sticks[ 0 ].blob[ 1 ].cy = Math.sin( t * 0.05 ) * 0.4 + 0.6
+
+
+    draw()
+
+    window.requestAnimationFrame( cycle )
+}
+cycle()
+
+</script>
 </html>
