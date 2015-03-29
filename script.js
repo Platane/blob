@@ -14,24 +14,44 @@ var gauss = function( cx, cy, tau, x, y ){
         return Math.exp( -0.5 * d  )
 }
 
+var gaussStick = function( cx, cy, tau, l, x, y ){
+
+    var xx = cx - x
+    var yy = cy - y
+
+    if( Math.abs( yy ) < l ){
+
+        var d = ( xx*xx ) / ( tau * tau )
+
+        return Math.exp( -0.5 * d )
+    } else {
+
+        yy += - ( Math.abs( yy ) / yy ) * l
+
+        var d = ( xx*xx + yy*yy ) / ( tau * tau )
+
+        return Math.exp( -0.5 * d )
+    }
+}
+
 var valueAt=  function(x,y){
     var v = 0
     for( var i = blob.length; i--; ){
         var u = blob[ i ]
-        v += gauss( u.x, u.y, u.tau, x, y)
+        v += gaussStick( u.x, u.y, u.tau, u.l, x, y)
     }
     return v
 }
 
 var thresholdValueAt = function(x,y){
+    return 1-valueAt( x,y )
     return valueAt( x,y ) < 0.5  ? 1 : 0
 }
 
 
 var blob = [
-    {x: 100, y: 100, tau:30},
-    {x: 150, y: 150, tau:30},
-    {x: 20, y: 50, tau:20},
+    {x: 100, y: 100, tau:20, l:10},
+    {x: 100, y: 180, tau:20, l:10},
 ]
 
 
@@ -47,8 +67,8 @@ var draw
     var ctx = canvas.getContext( '2d' )
     draw = function( maxW, maxH, fnValue ){
 
-        var w = canvas.width = 300
-        var h = canvas.height = 300
+        var w = canvas.width = 350
+        var h = canvas.height = 350
 
 
         var r = Math.max( maxW/w , maxH/h )
@@ -66,7 +86,7 @@ var draw
 
             k = (i*w + j)<<2
 
-            e = fnValue( x, y )
+            e = fnValue( y, x )
 
             arr[ k ] = arr[ k+1 ] = arr[ k+2 ] = 0|(e * 255)
             arr[ k+3 ] = 255
@@ -109,11 +129,9 @@ var cycle
 
         t++
 
-        for( var i = blob.length; i--; ){
-            var p = posFn[ i ]( t )
-            blob[ i ].x = p.x
-            blob[ i ].y = p.y
-        }
+        blob[ 0 ].l = Math.sin( t * 0.07 ) * 10 + 10
+        blob[ 0 ].y = Math.sin( t * 0.07 ) * 10 + 100
+
 
         stats.begin()
         draw( 200, 200, thresholdValueAt )
@@ -167,4 +185,5 @@ window.onload = function(){
 
     // start loop
     cycle()
+
 }
