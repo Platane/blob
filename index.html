@@ -5,6 +5,7 @@
 
 </body>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/stats.js/r11/Stats.min.js"></script>
+<script src="intervalle.js"></script>
 <script>
 
 
@@ -12,57 +13,24 @@ var sticks = [
     {
         cx: 0.5,
         blob:[
-            { tau: 0.04, cy: 0.5, l:0 },
-            { tau: 0.04, cy: 0.2, l:0 },
-            { tau: 0.04, cy: 0.8, l:0 },
-            { tau: 0.04, cy: 0.6, l:0 },
+            { tau: 0.05, cy: 0.3, l:0.2 },
+            { tau: 0.05, cy: 0.2, l:0 },
+            //{ tau: 0.04, cy: 0.8, l:0 },
+            //{ tau: 0.04, cy: 0.6, l:0 },
         ]
     }
 ]
 
 
-var gauss = function( cx, tau, l, x ){
+var gauss = function( cx, cy, tau, x, y ){
 
     var xx = cx - x
+    var yy = cy - y
 
-    if( Math.abs( xx ) <= l ){
+    var d = ( xx*xx + yy*yy ) / ( tau * tau )
 
-        return 1
-
-    } else {
-
-        xx += - ( Math.abs( xx ) / xx ) * l
-
-        var d = ( xx*xx ) / ( tau * tau )
-
-        return Math.exp( -0.5 * d )
-    }
+    return Math.exp( -0.5 * d  )
 }
-
-var computeStick = function( blob, l ){
-
-    var out = []
-
-    var s, sum
-
-    for( var k=l ; k-- ; ){
-
-        s = k/l
-        sum = 0
-
-        for( j= blob.length ; j-- ; ){
-
-            sum += gauss( blob[ j ].cy, blob[ j ].tau, blob[ j ].l, s )
-
-        }
-
-        out.push( Math.min( 1, sum ) )
-    }
-
-    return out
-}
-
-
 
 
 
@@ -75,28 +43,116 @@ var draw = function(  ){
 
 
     var w = canvas.width = 400
-    var h = canvas.height = 600
+    var h = canvas.height = 400
 
     ctx.clearRect( 0, 0, w, h )
-
+    ctx.fillStyle = '#000000'
 
     for(var k = sticks.length; k-- ;){
 
-        var x = sticks[ k ].cx * w
+        var cx = sticks[ k ].cx * w
 
-        var band = computeStick( sticks[ k ].blob, h )
+        var blob = sticks[ k ].blob
 
-        for(var i = h; i-- ;){
+        // draw black body zone
+        var int = new Interval()
 
-            var l = Math.pow( band[ i ] , 2 ) * 40
-            //l = 40
+        blob.forEach( function( b ){
+            if ( b.l > 0 )
+                int.union( b.cy - b.l, b.cy + b.l )
+        })
 
+        int.i.forEach( function( b ){
             ctx.beginPath()
-            ctx.rect( x-l/2, i, l , 1 )
-            //ctx.globalAlpha = band[ i ]
+            ctx.rect( cx-20, b.min*h, 40 , (b.max-b.min)*h )
             ctx.fill()
+        })
 
+        // draw non overlaping circle
+        blob.reduce( function( p, b ){
+
+            p.push( { cy: b.cy - b.l, tau: b.tau } )
+
+            p.push( { cy: b.cy + b.l, tau: b.tau } )
+
+            return p
+        }, [] )
+        .forEach( function( b ) {
+            ctx.beginPath()
+            ctx.arc( cx, b.cy*h, 20 , 0, Math.PI*2 )
+            ctx.fill()
+        })
+
+        // draw gauss skin
+        var ints = blob.reduce( function( p, b ){
+
+            if( b.l > 0 ){
+                p.push( { cy: b.cy - b.l, tau: b.tau, int: new Interval().add( b.cy-b.l-0.102, b.cy-b.l ) } )
+                p.push( { cy: b.cy + b.l, tau: b.tau, int: new Interval().add( b.cy+b.l, b.cy+b.l+0.102 ) } )
+            } else
+                p.push( { cy: b.cy, tau: b.tau, int: new Interval().add( b.cy-0.102, b.cy+0.102 ) } )
+
+            return p
+        }, [] )
+
+
+        for( var u = ints.length; u--; )
+        for( var v = u; v--; )
+        {
+
+            var h = ints[ u ].int.clone().intersection( ints[ v ].int )
+
+            if( !h.isEmpty() ){
+
+
+                var cg = [ ints[ u ], ints[ v ] ]
+
+
+                var x1 = cx-20
+                var x2 = cx+20
+                var y1 = 0|(h.i[0].min*400)
+                var y2 = 0|(h.i[0].max*400)
+
+                if( y1 == y2 )
+                    continue
+
+
+                ctx.beginPath()
+                ctx.rect( x1, y1, x2-x1, y2-y1 )
+                ctx.fillStyle = '#211371'
+                ctx.fill()
+
+
+
+
+                for( var x = x1; x< x2; x++ )
+                for( var y = y1; y< y2; y++ )
+                {
+                    var sum = cg.reduce( function( sum, g ){
+                        return sum + gauss( cx/400, g.cy, g.tau, x/400, y/400 )
+                    }, 0 )
+
+                    var e = 1-Math.min(1, sum )
+
+                    e = e > 0.3 ? 1 : 0
+
+                    var color = ( 0| (e * 255 ) ).toString( 16 )
+                    if( color.length < 2 )
+                        color = '0'+color
+
+                    ctx.beginPath()
+                    ctx.rect( x, y, 1, 1 )
+                    ctx.fillStyle = '#'+color+color+color
+                    ctx.fill()
+
+                }
+
+
+
+
+            }
         }
+
     }
 }
 
@@ -107,10 +163,10 @@ cycle = function(){
 
     t++
 
-    //sticks[ 0 ].blob[ 0 ].l = Math.sin( t * 0.07 ) * 0.1 + 0.1
-    sticks[ 0 ].blob[ 0 ].cy = Math.sin( t * 0.07 ) * 0.1 + 0.5
+    //sticks[ 0 ].blob[ 0 ].l = Math.sin( t * 0.01 ) * 0.06 + 0.1
+    //sticks[ 0 ].blob[ 0 ].cy = Math.sin( t * 0.07 ) * 0.1 + 0.5
 
-    sticks[ 0 ].blob[ 1 ].cy = Math.sin( t * 0.05 ) * 0.4 + 0.6
+    //sticks[ 0 ].blob[ 1 ].cy = Math.sin( t * 0.005 ) * 0.2 + 0.6
 
 
     draw()
@@ -118,6 +174,10 @@ cycle = function(){
     window.requestAnimationFrame( cycle )
 }
 cycle()
+
+document.body.addEventListener( 'mousemove', function( event ){
+    sticks[ 0 ].blob[ 1 ].cy = event.pageY / 400
+})
 
 </script>
 </html>
