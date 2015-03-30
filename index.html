@@ -8,18 +8,25 @@
 <script src="intervalle.js"></script>
 <script>
 
-
+var stickRadius = 0.051
+var tau = 0.056
 var sticks = [
     {
+        color: '#126392',
         cx: 0.5,
         blob:[
-            { tau: 0.045, cy: 0.3, l:0.2 },
-            { tau: 0.045, cy: 0.2, l:0 },
-            //{ tau: 0.04, cy: 0.8, l:0 },
-            //{ tau: 0.04, cy: 0.6, l:0 },
+            { cy: 0.3, l:0.05 },
+            { cy: 0.5, l:0.02 },
         ]
     }
 ]
+
+var computeThreshold = function( stickRadius, tau ){
+    return gauss( 0, 0, tau, 0, stickRadius )
+}
+var computeActiveZone = function( stickRadius, tau, epsylon ){
+    return Math.sqrt( - 2 * Math.log( epsylon ) * tau*tau ) + stickRadius
+}
 
 
 var gauss = function( cx, cy, tau, x, y ){
@@ -32,7 +39,104 @@ var gauss = function( cx, cy, tau, x, y ){
     return Math.exp( -0.5 * d  )
 }
 
+/**
+ * draw one blob
+ */
+var drawOneBlob = function( ctx, dim, cx, cy, l, stickRadius ){
+    ctx.beginPath()
+    ctx.arc( cx*dim.x, (cy-l)*dim.y, stickRadius*dim.y, Math.PI, 0 )
+    ctx.fill()
+    ctx.beginPath()
+    ctx.rect( cx*dim.x-stickRadius*dim.x, (cy-l)*dim.y, stickRadius*2*dim.x, l*2*dim.y)
+    ctx.fill()
+    ctx.beginPath()
+    ctx.arc( cx*dim.x, (cy+l)*dim.y, stickRadius*dim.y, 0, Math.PI )
+    ctx.fill()
+}
 
+
+/**
+ * draw all the blobs of the stick
+ */
+var drawBodyStick = function( ctx, dim, stick, stickRadius ){
+    ctx.fillStyle = stick.color
+
+    for( var i = stick.blob.length; i--; )
+        drawOneBlob( ctx, dim, stick.cx, stick.blob[ i ].cy, stick.blob[ i ].l, stickRadius )
+}
+
+
+var drawJonction = function( ctx, dim, ox, oy, width, height, gaussOrigins, tau, color, threshold ){
+
+    var left = ( 0 | ( ox * dim.x ) )+1
+    var right = ( 0 | ( ( ox + width ) * dim.x ) )-1
+    var top = 0 | ( oy * dim.y )
+    var bot = 0 | ( ( oy + height ) * dim.y )
+
+
+    ctx.beginPath()
+    ctx.fillStyle = '#ffffff'
+    ctx.rect( left, top, right-left, bot-top )
+    ctx.fill()
+
+    ctx.fillStyle = color
+
+    //return
+
+    for( var x=left; x<=right; x++ )
+    for( var y=top; y<=bot; y++ )
+    {
+        var sum = 0
+
+        for( var k=gaussOrigins.length; k--; )
+            sum += gauss( ox+width/2, gaussOrigins[ k ], tau, x/dim.x, y/dim.y )
+
+        if( sum < threshold )
+            continue
+
+        ctx.globalAlpha = Math.min(1 , ( sum - threshold ) * 80 )
+
+        ctx.beginPath()
+        ctx.rect( x, y, 1, 1 )
+        ctx.fill()
+    }
+
+    // TODO use symetry
+}
+
+/**
+ * draw all the jonctions between the blobs of the stick
+ */
+var drawBlobyJonction = function( ctx, dim, stick, stickRadius, tau ){
+
+    var azone = computeActiveZone( stickRadius, tau, 0.005 )
+
+    var blobs = stick.blob
+
+    var threshold = computeThreshold( stickRadius, tau )
+
+    var bot, top
+
+    for( var i = blobs.length; i--; )
+    for( var j = blobs.length; j--; )
+    {
+
+        if(  i != j && ( bot = blobs[ i ].cy - blobs[ i ].l ) - ( top = blobs[ j ].cy + blobs[ j ].l ) < azone && bot - top > 0 ){
+
+            // contact
+            drawJonction( ctx, dim, stick.cx-stickRadius, top, stickRadius*2, bot-top, [ bot, top ], tau, stick.color, threshold )
+        }
+
+    }
+
+}
+
+var drawStick = function( ctx, dim, stick, stickRadius, tau ){
+
+    drawBodyStick( ctx, dim, stick, stickRadius )
+
+    drawBlobyJonction( ctx, dim, stick, stickRadius, tau )
+}
 
 
 var canvas = document.createElement( 'canvas' )
@@ -48,121 +152,18 @@ var draw = function(  ){
     ctx.clearRect( 0, 0, w, h )
     ctx.fillStyle = '#000000'
 
-    for(var k = sticks.length; k-- ;){
+    for(var k = sticks.length; k-- ;)
 
-        var cx = sticks[ k ].cx * w
-
-        var blob = sticks[ k ].blob
-
-        // draw black body zone
-        var int = new Interval()
-
-        blob.forEach( function( b ){
-            if ( b.l > 0 )
-                int.union( b.cy - b.l, b.cy + b.l )
-        })
-
-        int.i.forEach( function( b ){
-            ctx.beginPath()
-            ctx.rect( cx-20, b.min*h, 40 , (b.max-b.min)*h )
-            ctx.fill()
-        })
-
-        // draw non overlaping circle
-        blob.reduce( function( p, b ){
-
-            p.push( { cy: b.cy - b.l, tau: b.tau } )
-
-            p.push( { cy: b.cy + b.l, tau: b.tau } )
-
-            return p
-        }, [] )
-        .forEach( function( b ) {
-            ctx.beginPath()
-            ctx.arc( cx, b.cy*h, 20 , 0, Math.PI*2 )
-            ctx.fill()
-        })
-
-        // draw gauss skin
-        var ext = {
-            bottom : blob.map( function( b ){
-                return {
-                    cy: b.cy - b.l,
-                    tau: b.tau,
-                    int: new Interval().add( b.cy-b.l-0.142, b.cy-b.l )
-                }
-            }),
-            top : blob.map( function( b ){
-                return {
-                    cy: b.cy + b.l,
-                    tau: b.tau,
-                    int: new Interval().add( b.cy+b.l, b.cy+b.l+0.142 )
-                }
-            })
-        }
-
-        for( var u = ext.top.length; u--; )
-        for( var v = ext.bottom.length; v--; )
-        {
-
-            var h = ext.top[ u ].int.clone().intersection( ext.bottom[ v ].int )
-
-            if( !h.isEmpty() ){
+        drawStick( ctx, {x:w, y:h}, sticks[ k ], stickRadius , tau )
 
 
-                var cg = [ ext.top[ u ], ext.bottom[ v ] ]
-
-
-                var x1 = cx-20
-                var x2 = cx+20
-                var y1 = 0|(h.i[0].min*400)
-                var y2 = 0|(h.i[0].max*400)
-
-                if( y1 == y2 )
-                    continue
-
-
-                ctx.beginPath()
-                ctx.rect( x1, y1, x2-x1, y2-y1 )
-                ctx.fillStyle = '#211371'
-                ctx.fill()
-
-
-
-
-                for( var x = x1; x< x2; x++ )
-                for( var y = y1; y< y2; y++ )
-                {
-                    var sum = cg.reduce( function( sum, g ){
-                        return sum + gauss( cx/400, g.cy, g.tau, x/400, y/400 )
-                    }, 0 )
-
-                    var e = 1-Math.min(1, sum )
-
-                    e = e > 0.48 ? 1 : 0
-
-                    var color = ( 0| (e * 255 ) ).toString( 16 )
-                    if( color.length < 2 )
-                        color = '0'+color
-
-                    ctx.beginPath()
-                    ctx.rect( x, y, 1, 1 )
-                    ctx.fillStyle = '#'+color+color+color
-                    ctx.fill()
-
-                }
-
-
-
-
-            }
-        }
-
-    }
 }
 
 
-
+var stats = {
+    begin: function(){},
+    end: function(){},
+}
 var t = 0
 cycle = function(){
 
@@ -171,10 +172,11 @@ cycle = function(){
     //sticks[ 0 ].blob[ 0 ].l = Math.sin( t * 0.01 ) * 0.06 + 0.1
     //sticks[ 0 ].blob[ 0 ].cy = Math.sin( t * 0.07 ) * 0.1 + 0.5
 
-    sticks[ 0 ].blob[ 1 ].cy = Math.sin( t * 0.05 ) * 0.2 + 0.6
+    //sticks[ 0 ].blob[ 0 ].cy = Math.sin( t * 0.05 ) * 0.15 + 0.7
 
-
+    stats.begin()
     draw()
+    stats.end()
 
     window.requestAnimationFrame( cycle )
 }
@@ -183,6 +185,20 @@ cycle()
 document.body.addEventListener( 'mousemove', function( event ){
     sticks[ 0 ].blob[ 1 ].cy = event.pageY / 400
 })
+
+
+window.onload = function(){
+
+    if( window.Stats ){
+        stats = new Stats()
+
+        stats.domElement.style.position = 'absolute'
+        stats.domElement.style.right = '0px'
+        stats.domElement.style.bottom = '0px'
+
+        document.body.appendChild( stats.domElement )
+    }
+}
 
 </script>
 </html>
