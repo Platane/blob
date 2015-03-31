@@ -5,7 +5,6 @@
 
 </body>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/stats.js/r11/Stats.min.js"></script>
-<script src="intervalle.js"></script>
 <script>
 
 var stickRadius = 0.051
@@ -15,8 +14,24 @@ var sticks = [
         color: '#126392',
         cx: 0.5,
         blob:[
-            { cy: 0.3, l:0.05 },
+            { cy: 0.3, l:0.1 },
+            { cy: 0.5, l:0.023 },
+        ]
+    },
+    {
+        color: '#486ed1',
+        cx: 0.35,
+        blob:[
+            { cy: 0.6, l:0.03 },
             { cy: 0.5, l:0.02 },
+        ]
+    },
+    {
+        color: '#4ed153',
+        cx: 0.65,
+        blob:[
+            { cy: 0.4, l:0.03 },
+            { cy: 0.5, l:0.01 },
         ]
     }
 ]
@@ -44,13 +59,13 @@ var gauss = function( cx, cy, tau, x, y ){
  */
 var drawOneBlob = function( ctx, dim, cx, cy, l, stickRadius ){
     ctx.beginPath()
-    ctx.arc( cx*dim.x, (cy-l)*dim.y, stickRadius*dim.y, Math.PI, 0 )
+    ctx.arc( cx*dim.x, (cy-l)*dim.y+1, stickRadius*dim.y, Math.PI, 0 )
     ctx.fill()
     ctx.beginPath()
     ctx.rect( cx*dim.x-stickRadius*dim.x, (cy-l)*dim.y, stickRadius*2*dim.x, l*2*dim.y)
     ctx.fill()
     ctx.beginPath()
-    ctx.arc( cx*dim.x, (cy+l)*dim.y, stickRadius*dim.y, 0, Math.PI )
+    ctx.arc( cx*dim.x, (cy+l)*dim.y-1, stickRadius*dim.y, 0, Math.PI )
     ctx.fill()
 }
 
@@ -72,12 +87,6 @@ var drawJonction = function( ctx, dim, ox, oy, width, height, gaussOrigins, tau,
     var right = ( 0 | ( ( ox + width ) * dim.x ) )-1
     var top = 0 | ( oy * dim.y )
     var bot = 0 | ( ( oy + height ) * dim.y )
-
-
-    ctx.beginPath()
-    ctx.fillStyle = '#ffffff'
-    ctx.rect( left, top, right-left, bot-top )
-    ctx.fill()
 
     ctx.fillStyle = color
 
@@ -133,9 +142,10 @@ var drawBlobyJonction = function( ctx, dim, stick, stickRadius, tau ){
 
 var drawStick = function( ctx, dim, stick, stickRadius, tau ){
 
+    drawBlobyJonction( ctx, dim, stick, stickRadius, tau )
+
     drawBodyStick( ctx, dim, stick, stickRadius )
 
-    drawBlobyJonction( ctx, dim, stick, stickRadius, tau )
 }
 
 
@@ -146,8 +156,8 @@ var draw = function(  ){
 
 
 
-    var w = canvas.width = 400
-    var h = canvas.height = 400
+    var w = canvas.width = 200
+    var h = canvas.height = 200
 
     ctx.clearRect( 0, 0, w, h )
     ctx.fillStyle = '#000000'
@@ -169,10 +179,10 @@ cycle = function(){
 
     t++
 
-    //sticks[ 0 ].blob[ 0 ].l = Math.sin( t * 0.01 ) * 0.06 + 0.1
-    //sticks[ 0 ].blob[ 0 ].cy = Math.sin( t * 0.07 ) * 0.1 + 0.5
+    sticks[ 0 ].blob[ 0 ].l = Math.sin( t * 0.01 ) * 0.06 + 0.1
+    sticks[ 0 ].blob[ 0 ].cy = Math.sin( t * 0.07 ) * 0.1 + 0.5
 
-    //sticks[ 0 ].blob[ 0 ].cy = Math.sin( t * 0.05 ) * 0.15 + 0.7
+    sticks[ 2 ].blob[ 0 ].cy = Math.sin( t * 0.05 ) * 0.15 + 0.7
 
     stats.begin()
     draw()
@@ -183,7 +193,13 @@ cycle = function(){
 cycle()
 
 document.body.addEventListener( 'mousemove', function( event ){
-    sticks[ 0 ].blob[ 1 ].cy = event.pageY / 400
+
+    var x = event.pageX / window.innerWidth
+    var y = event.pageY / window.innerHeight
+
+    sticks[ 0 ].blob[ 1 ].cy = 0.1 + x*0.8
+    sticks[ 1 ].blob[ 1 ].cy = 0.9 - x*0.6
+    sticks[ 2 ].blob[ 1 ].cy = 0.2 + x*0.8
 })
 
 
