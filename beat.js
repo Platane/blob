@@ -3,7 +3,7 @@ let defaultConfig = {
 
     nFreq : 32,
 
-    windowSize : 128
+    windowSize : 512
 
 }
 
@@ -18,9 +18,10 @@ let nextBatch = function( buffer ){
 
     // shift the window
     for( var i=this._windows.length; i--; ){
-        this._windows[ i ].shift()
-        this._windows[ i ].push( buffer[ i ] )
+        if( this._windows[ i ].length > this._config.windowSize )
+            this._windows[ i ].shift()
 
+        this._windows[ i ].push( buffer[ i ] )
     }
 
     // compute the average
@@ -35,11 +36,11 @@ let nextBatch = function( buffer ){
     }
 
     // compute the smooth
-    let h=10
+    let h=5
     for( var i=this._windows.length; i--; ){
 
         let s = 0
-        for( var k=this._windows[ i ].length - h ; k< this._windows[ i ].length; k++ )
+        for( var k= Math.max( this._windows[ i ].length - h, 0 ) ; k< this._windows[ i ].length; k++ )
             s += this._windows[ i ][ k ]
         s /= h
 
@@ -52,7 +53,10 @@ export class BeatAnalyser {
     constructor( config ){
 
 
-        this._config = config || defaultConfig
+        this._config = config || {}
+        for( var i in defaultConfig )
+            this._config[ i ] = this._config[ i ] || defaultConfig[ i ]
+
 
         // avg amplitude for each frequency ( computed on a sliding window )
         this.avgFreq = new Buffer( this._config.nFreq )
@@ -65,13 +69,10 @@ export class BeatAnalyser {
         // save all the point in a sliding window for computation
         this._windows = []
 
-        let zeros = []
-        for( var k=this._config.windowSize; k--; )
-            zeros.push( 0 )
 
 
         for( var k=this._config.nFreq; k--; )
-            this._windows.push( zeros.slice() )
+            this._windows.push( [] )
     }
 
     nextBatch( buffer ){

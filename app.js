@@ -10,7 +10,7 @@ let soundPlayer = new AnalyzerPlayer()
 
     // TODO filter
 
-
+    // read the file as bufferArray
     let readFile = function( file ){
 
         let reader = new FileReader()
@@ -25,6 +25,7 @@ let soundPlayer = new AnalyzerPlayer()
         })
     }
 
+    // read the file, load it into the player, play
     let processFile = ( file ) => readFile( file )
             .then( soundPlayer.bindBuffer.bind( soundPlayer ) )
             .then( () => console.log('playing  ..') )
@@ -33,23 +34,35 @@ let soundPlayer = new AnalyzerPlayer()
 
             .then( null, err => console.log( err.stack ) )
 
-
+    // input button event handler
     let dom = document.createElement('input')
     dom.setAttribute('type', 'file')
+    dom.setAttribute('style', 'display:block;')
     document.body.appendChild( dom )
     dom.addEventListener('change', (event) => processFile( event.target.files[0] ) )
 
+
+    // drag and drop handler
+    document.body.addEventListener('drop', function(event) {
+        processFile( event.dataTransfer.files[0] )
+        event.preventDefault()
+        event.stopPropagation() })
+
+    document.body.addEventListener('dragover', function(event) {
+        event.preventDefault()
+        event.stopPropagation()  })
 })()
 
 
 
 var drawF = (function(){
     var canvas = document.createElement( 'canvas' )
+    canvas.setAttribute('style', 'display:block;')
     document.body.appendChild( canvas )
     var ctx = canvas.getContext( '2d' )
     return function( beat ){
         var w = canvas.width = 1024
-        var h = canvas.height = 512
+        var h = canvas.height = 400
 
         ctx.clearRect( 0, 0, w, h )
         ctx.fillStyle = '#000000'
@@ -87,6 +100,7 @@ var drawF = (function(){
 
 var drawC = (function(){
     var canvas = document.createElement( 'canvas' )
+    canvas.setAttribute('style', 'display:block;')
     document.body.appendChild( canvas )
     var ctx = canvas.getContext( '2d' )
 
@@ -95,11 +109,11 @@ var drawC = (function(){
     var key=5
 
     return function( beat ){
-        var w = canvas.width = 2048
-        var h = canvas.height = 256
+        var w = canvas.width = 1024
+        var h = canvas.height = 200
 
         ctx.clearRect( 0, 0, w, h )
-
+        ctx.lineWidth = 0.5
 
 
         avg.push( beat.avgFreq[ key ] )
@@ -107,6 +121,11 @@ var drawC = (function(){
 
         var rx = w / Math.max( avg.length, 3000 )
 
+
+        ctx.beginPath()
+        ctx.rect( avg.length*rx - rx*beat._config.windowSize , (1-avg[ avg.length-1 ]/255)*h -30, rx*beat._config.windowSize, 60   )
+        ctx.strokeStyle = '#a14294'
+        ctx.stroke()
 
 
         ctx.beginPath()
@@ -135,4 +154,3 @@ var cycle = function(){
 
     window.requestAnimationFrame( cycle )
 }
-cycle()
