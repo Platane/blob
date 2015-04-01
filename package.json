@@ -1,0 +1,22 @@
+{
+    "name": "blob",
+    "version":"0.0.1",
+
+    "dependencies": {
+
+    },
+
+    "devDependencies" : {
+        "browserify" : "*",
+        "babelify" : "*",
+        "express" : "*"
+    },
+
+    "engines": {
+        "iojs": "1.5"
+    },
+
+    "script": {
+        "prepublish": "iojs ./tasks/run.js"
+    }
+}
