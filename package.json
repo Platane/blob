@@ -16,7 +16,7 @@
         "iojs": "1.5"
     },
 
-    "script": {
+    "scripts": {
         "prepublish": "iojs ./tasks/run.js"
     }
 }
