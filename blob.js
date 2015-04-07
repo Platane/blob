@@ -107,13 +107,9 @@ var drawBlobyJonction = function( ctx, dim, stick, stickRadius, tau ){
 
 }
 
-var drawStick = function( ctx, dim, stick, stickRadius, tau ){
+export function drawStick( ctx, dim, stick, stickRadius, tau ){
 
     drawBlobyJonction( ctx, dim, stick, stickRadius, tau )
 
     drawBodyStick( ctx, dim, stick, stickRadius )
-}
-
-module.exports = {
-    drawStick : drawStick
 }

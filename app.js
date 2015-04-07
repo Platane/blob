@@ -58,7 +58,7 @@ const key=31
 
 var drawF = (function(){
     var canvas = document.createElement( 'canvas' )
-    canvas.setAttribute('style', 'display:block;')
+    canvas.setAttribute('id', 'freq')
     document.body.appendChild( canvas )
     var ctx = canvas.getContext( '2d' )
     return function( beat ){
@@ -102,7 +102,7 @@ var drawF = (function(){
 var drawLk = (function(){
 
     var canvas = document.createElement( 'canvas' )
-    canvas.setAttribute('style', 'display:block;')
+    canvas.setAttribute('id', 'lk')
     document.body.appendChild( canvas )
     var ctx = canvas.getContext( '2d' )
     return function( beat ){
@@ -134,7 +134,7 @@ var drawLk = (function(){
 
 var drawC = (function(){
     var canvas = document.createElement( 'canvas' )
-    canvas.setAttribute('style', 'display:block;')
+    canvas.setAttribute('id', 'curve')
     document.body.appendChild( canvas )
     var ctx = canvas.getContext( '2d' )
 
@@ -180,11 +180,80 @@ var drawC = (function(){
 })()
 
 
+
+import { drawStick } from './blob'
+var drawS = (function(){
+    var canvas = document.createElement( 'canvas' )
+    canvas.setAttribute('id', 'blob')
+    document.body.appendChild( canvas )
+    var ctx = canvas.getContext( '2d' )
+
+    var tau = 0.056
+    var stickRadius = 0.051
+    var sticks = [
+        {
+            color: '#126392',
+            cx: 0.5,
+            blob:[
+                { cy: 0.3, l:0.1 },
+                { cy: 0.5, l:0.023 },
+            ]
+        },
+        {
+            color: '#486ed1',
+            cx: 0.35,
+            blob:[
+                { cy: 0.6, l:0.03 },
+                { cy: 0.5, l:0.02 },
+            ]
+        },
+        {
+            color: '#4ed153',
+            cx: 0.65,
+            blob:[
+                { cy: 0.4, l:0.03 },
+                { cy: 0.5, l:0.01 },
+            ]
+        }
+    ]
+
+
+    var h = canvas.height = 500
+    var w = canvas.width = 500
+
+    let t=0
+
+    return function( beat ){
+
+
+        t++
+
+        sticks[ 0 ].blob[ 0 ].l = Math.sin( t * 0.01 ) * 0.06 + 0.1
+        sticks[ 0 ].blob[ 0 ].cy = Math.sin( t * 0.07 ) * 0.1 + 0.5
+
+        sticks[ 2 ].blob[ 0 ].cy = Math.sin( t * 0.05 ) * 0.15 + 0.7
+
+        sticks[ 1 ].blob[ 0 ].cy = Math.sin( t * 0.05 ) * 0.15 + 0.7
+
+        ctx.clearRect( 0, 0, w, h )
+        for( let i = sticks.length; i--; )
+            drawStick( ctx, {x: w, y: h}, sticks[ i ], stickRadius, tau )
+
+    }
+})()
+
 var cycle = function(){
 
+    try{
     drawF( soundPlayer.beat )
     drawC( soundPlayer.beat )
     drawLk( soundPlayer.beat )
+    drawS()
 
+    }catch( e ){
+        console.log( e.stack )
+    }
     window.requestAnimationFrame( cycle )
 }
+
+drawS()
