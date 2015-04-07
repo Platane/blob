@@ -218,8 +218,8 @@ var drawS = (function(){
     ]
 
 
-    var h = canvas.height = 500
-    var w = canvas.width = 500
+    var h = canvas.height = 250
+    var w = canvas.width = 250
 
     let t=0
 
@@ -233,7 +233,7 @@ var drawS = (function(){
 
         sticks[ 2 ].blob[ 0 ].cy = Math.sin( t * 0.05 ) * 0.15 + 0.7
 
-        sticks[ 1 ].blob[ 0 ].cy = Math.sin( t * 0.05 ) * 0.15 + 0.7
+        sticks[ 1 ].blob[ 0 ].cy = Math.sin( t * 0.05 + 2.98 ) * 0.15 + 0.7
 
         ctx.clearRect( 0, 0, w, h )
         for( let i = sticks.length; i--; )

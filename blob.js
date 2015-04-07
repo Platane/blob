@@ -21,6 +21,50 @@ var gauss = function( cx, cy, tau, x, y ){
     return Math.exp( -0.5 * d  )
 }
 
+
+let gaussBuffer = (function(){
+    let fillGaussBuffer = function( imgData, tau ){
+
+        let data = imgData.data
+
+        let k, x, y
+
+        for( x=imgData.width; x--; )
+        for( y=imgData.height; y--; ){
+
+            k = ( x*imgData.height + y )<<2
+
+            data[ k   ] = data[ k+1 ] = data[ k+2 ] = 0
+            data[ k+3 ] = gauss( 0, 0, tau, x, y ) * 255
+        }
+    }
+    let prepareGaussBuffer = function( _canvas ){
+
+        let canvas = _canvas || document.createElement( 'canvas' )
+        let w = canvas.width = canvas.height = 100
+
+        let epsylon = 0.01
+        let tau = w / Math.sqrt( - 2 * Math.log( epsylon ) )
+
+
+        let ctx = canvas.getContext('2d')
+
+        let id = ctx.getImageData( 0, 0, w, w )
+
+        fillGaussBuffer( id, tau )
+
+        ctx.putImageData( id, 0, 0 )
+
+        return { canvas: canvas, tau: tau, w: w }
+    }
+
+    return prepareGaussBuffer(  )
+})()
+
+
+
+
+
 /**
  * draw one blob
  */
@@ -50,34 +94,52 @@ var drawBodyStick = function( ctx, dim, stick, stickRadius ){
 
 var drawJonction = function( ctx, dim, ox, oy, width, height, gaussOrigins, tau, color, threshold ){
 
-    var left = ( 0 | ( ox * dim.x ) )+1
-    var right = ( 0 | ( ( ox + width ) * dim.x ) )-1
-    var top = 0 | ( oy * dim.y )
-    var bot = 0 | ( ( oy + height ) * dim.y )
-
     ctx.fillStyle = color
 
     //return
 
-    for( var x=left; x<=right; x++ )
-    for( var y=top; y<=bot; y++ )
+    let _ox = 0|(ox*dim.x)
+    let _oy = 0|(oy*dim.y)
+
+    let _width2 = (width*dim.x)>>1
+    let _height2 = (height*dim.y)>>1
+
+    for( var x=0; x<_width2; x++ )
+    for( var y=0; y<_height2; y++ )
     {
         var sum = 0
 
         for( var k=gaussOrigins.length; k--; )
-            sum += gauss( ox+width/2, gaussOrigins[ k ], tau, x/dim.x, y/dim.y )
+            sum += gauss( 0, gaussOrigins[ k ] - oy - height/2, tau, x/dim.x, y/dim.y )
 
         if( sum < threshold )
             continue
 
-        ctx.globalAlpha = Math.min(1 , ( sum - threshold ) * 80 )
+        ctx.globalAlpha = Math.max( 0.85, Math.min(1 , ( sum - threshold ) * 80 ) )
 
+
+        // top right
         ctx.beginPath()
-        ctx.rect( x, y, 1, 1 )
+        ctx.rect( _ox + x + _width2, _oy + y + _height2, 1, 1 )
+        ctx.fill()
+
+        // top left
+        ctx.beginPath()
+        ctx.rect( _ox - x + _width2, _oy + y + _height2, 1, 1 )
+        ctx.fill()
+
+        // bot right
+        ctx.beginPath()
+        ctx.rect( _ox + x + _width2, _oy - y + _height2, 1, 1 )
+        ctx.fill()
+
+        // bot left
+        ctx.beginPath()
+        ctx.rect( _ox - x + _width2, _oy - y + _height2, 1, 1 )
         ctx.fill()
     }
 
-    // TODO use symetry
+    ctx.globalAlpha = 1
 }
 
 /**
@@ -107,9 +169,11 @@ var drawBlobyJonction = function( ctx, dim, stick, stickRadius, tau ){
 
 }
 
+
 export function drawStick( ctx, dim, stick, stickRadius, tau ){
 
     drawBlobyJonction( ctx, dim, stick, stickRadius, tau )
 
     drawBodyStick( ctx, dim, stick, stickRadius )
+
 }
