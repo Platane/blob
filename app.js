@@ -54,6 +54,7 @@ let soundPlayer = new AnalyzerPlayer()
 })()
 
 
+const key=31
 
 var drawF = (function(){
     var canvas = document.createElement( 'canvas' )
@@ -84,12 +85,12 @@ var drawF = (function(){
 
 
         ctx.globalAlpha = 0.7
-        var arr = beat.smoothInstantFreq
+        var arr = beat.instantFreq
 
         for( var k = 0; k<l ; k++ ){
 
 
-            ctx.fillStyle = k == 5 ? '#1237AE' : '#823234'
+            ctx.fillStyle = k == key ? '#1237AE' : '#823234'
             ctx.beginPath()
             ctx.rect( k/l*w+3, (1-arr[ k ]/maxVal)*h, 1/l*w-6, arr[ k ]/maxVal*h )
             ctx.fill()
@@ -122,6 +123,8 @@ var drawLk = (function(){
 
         for( var k = 0; k<l ; k++ ){
 
+            ctx.fillStyle = k == key ? '#1237AE' : '#823234'
+
             ctx.beginPath()
             ctx.rect( k/l*w+3, (1-arr[ k ]/maxVal)*h, 1/l*w-6, arr[ k ]/maxVal*h )
             ctx.fill()
@@ -137,7 +140,6 @@ var drawC = (function(){
 
     var avg=[]
     var inst=[]
-    var key=5
 
     return function( beat ){
         var w = canvas.width = 1024

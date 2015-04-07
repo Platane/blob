@@ -1,4 +1,6 @@
 
+import { fourier } from 'fourier'
+
 let defaultConfig = {
 
     nFreq : 32,
@@ -81,6 +83,14 @@ let nextBatch = function( buffer ){
 
     // compute best channel
     this.relevantness = this._windows.map( curveLikehood.bind( null, this.instantT ) )
+
+    let bestChannel = this._windows[ 31 ]
+
+    let img = []
+    for( let i = bestChannel.length; i--; )
+        img.push( 0 )
+    // /let r = fourier.fft( bestChannel, img )
+
 }
 
 export class BeatAnalyser {

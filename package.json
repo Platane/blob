@@ -9,7 +9,8 @@
     "devDependencies" : {
         "browserify" : "*",
         "babelify" : "*",
-        "express" : "*"
+        "express" : "*",
+        "fourier" : "*"
     },
 
     "engines": {
