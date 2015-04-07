@@ -98,6 +98,37 @@ var drawF = (function(){
 })()
 
 
+var drawLk = (function(){
+
+    var canvas = document.createElement( 'canvas' )
+    canvas.setAttribute('style', 'display:block;')
+    document.body.appendChild( canvas )
+    var ctx = canvas.getContext( '2d' )
+    return function( beat ){
+
+        var w = canvas.width = 1024
+        var h = canvas.height = 80
+
+        ctx.clearRect( 0, 0, w, h )
+        ctx.fillStyle = '#000000'
+        ctx.globalAlpha = 1
+
+
+        var arr = beat.avgFreq
+        var l = Math.min( arr.length, 64 )
+        var maxVal = 3
+
+        var arr = beat.relevantness
+
+        for( var k = 0; k<l ; k++ ){
+
+            ctx.beginPath()
+            ctx.rect( k/l*w+3, (1-arr[ k ]/maxVal)*h, 1/l*w-6, arr[ k ]/maxVal*h )
+            ctx.fill()
+        }
+    }
+})()
+
 var drawC = (function(){
     var canvas = document.createElement( 'canvas' )
     canvas.setAttribute('style', 'display:block;')
@@ -151,6 +182,7 @@ var cycle = function(){
 
     drawF( soundPlayer.beat )
     drawC( soundPlayer.beat )
+    drawLk( soundPlayer.beat )
 
     window.requestAnimationFrame( cycle )
 }

@@ -7,6 +7,52 @@ let defaultConfig = {
 
 }
 
+let average = function( arr, start=0, end=0 ){
+    let sum = 0
+    end = end || ( arr.length - start )
+    for( let i=start; i<end; i++ )
+        sum += arr[ i ]
+    return sum / ( end-start )
+}
+let variance = function( arr, start=0, end=0 ){
+    let e = 0
+    let esquare = 0
+
+    end = end || ( arr.length - start )
+    for( let i=start; i<end; i++ ){
+        e += arr[ i ]
+        esquare += arr[ i ] * arr[ i ]
+    }
+    e /= ( end-start )
+    esquare /= ( end-start )
+
+    return esquare - e*e
+}
+/**
+ * return a number which is bigger when the signal seems to look like following the expected period ( T )
+ *
+ * do mean comparaison
+ */
+let curveLikehood = function( expectedT, channel ){
+
+    const nPeriod = 2
+
+    let avgWidth = expectedT * nPeriod
+
+    // compute the avg
+    let avgs = []
+
+    let k = ( channel.length / avgWidth ) << 0
+    let end = channel.length
+    while( k-- ){
+        let s = end - avgWidth
+        avgs[ k ] = average( channel, s, end )
+        end = s
+    }
+
+
+    return variance( avgs ) / average( avgs )
+}
 
 
 let nextBatch = function( buffer ){
@@ -25,27 +71,16 @@ let nextBatch = function( buffer ){
     }
 
     // compute the average
-    for( var i=this._windows.length; i--; ){
-
-        let s = 0
-        for( var k=this._windows[ i ].length; k--; )
-            s += this._windows[ i ][ k ]
-        s /= this._windows[ i ].length
-
-        this.avgFreq[ i ] = s
-    }
+    for( var i=this._windows.length; i--; )
+        this.avgFreq[ i ] = average( this._windows[ i ] )
 
     // compute the smooth
     let h=5
-    for( var i=this._windows.length; i--; ){
+    for( var i=this._windows.length; i--; )
+        this.smoothInstantFreq[ i ] = average( this._windows[ i ], Math.max( this._windows[ i ].length - h, 0 ), this._windows[ i ].length )
 
-        let s = 0
-        for( var k= Math.max( this._windows[ i ].length - h, 0 ) ; k< this._windows[ i ].length; k++ )
-            s += this._windows[ i ][ k ]
-        s /= h
-
-        this.smoothInstantFreq[ i ] = s
-    }
+    // compute best channel
+    this.relevantness = this._windows.map( curveLikehood.bind( null, this.instantT ) )
 }
 
 export class BeatAnalyser {
@@ -65,6 +100,9 @@ export class BeatAnalyser {
 
         this.instantFreq = new Buffer( this._config.nFreq )
 
+        this.relevantness = new Buffer( this._config.nFreq )
+
+        this.instantT = 100
 
         // save all the point in a sliding window for computation
         this._windows = []
