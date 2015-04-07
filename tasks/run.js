@@ -3,7 +3,7 @@ require( './build' )()
     console.log(err.stack)
 })
 
-require( './serve' )()
+//require( './serve' )()
 
 
 require( './watch' )()
