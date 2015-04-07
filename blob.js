@@ -94,52 +94,53 @@ var drawBodyStick = function( ctx, dim, stick, stickRadius ){
 
 var drawJonction = function( ctx, dim, ox, oy, width, height, gaussOrigins, tau, color, threshold ){
 
-    ctx.fillStyle = color
 
-    //return
+    let _width2 = ((width*dim.x)>>1 ) +1
+    let _height2 = ((height*dim.y)>>1 ) +1
 
-    let _ox = 0|(ox*dim.x)
-    let _oy = 0|(oy*dim.y)
+    let _cx = 0|(ox*dim.x) + _width2
+    let _cy = 0|(oy*dim.y) + _height2
 
-    let _width2 = (width*dim.x)>>1
-    let _height2 = (height*dim.y)>>1
+    // extract imageData
+    let imageData = ctx.getImageData( _cx-_width2, _cy-_height2, _width2*2, _height2*2 )
 
-    for( var x=0; x<_width2; x++ )
-    for( var y=0; y<_height2; y++ )
+    let x, y, sum, k, j
+
+    for( x=0; x<_width2; x++ )
+    for( y=0; y<_height2; y++ )
     {
-        var sum = 0
+        sum = 0
 
-        for( var k=gaussOrigins.length; k--; )
-            sum += gauss( 0, gaussOrigins[ k ] - oy - height/2, tau, x/dim.x, y/dim.y )
+        for( let j=gaussOrigins.length; j--; )
+            sum += gauss( 0, gaussOrigins[ j ] - _cy/dim.y, tau, x/dim.x, y/dim.y )
 
-        if( sum < threshold )
-            continue
 
-        ctx.globalAlpha = Math.max( 0.85, Math.min(1 , ( sum - threshold ) * 80 ) )
-
+        let alpha = sum < threshold ? 0 : 255
 
         // top right
-        ctx.beginPath()
-        ctx.rect( _ox + x + _width2, _oy + y + _height2, 1, 1 )
-        ctx.fill()
+        k = (( _width2 + x ) + ( _height2 + y ) * imageData.width ) * 4
+        imageData.data[ k  ] = imageData.data[ k+1 ] = imageData.data[ k+2 ] = 128
+        imageData.data[ k+3 ] = alpha
 
         // top left
-        ctx.beginPath()
-        ctx.rect( _ox - x + _width2, _oy + y + _height2, 1, 1 )
-        ctx.fill()
-
-        // bot right
-        ctx.beginPath()
-        ctx.rect( _ox + x + _width2, _oy - y + _height2, 1, 1 )
-        ctx.fill()
+        k = k - x * 8
+        imageData.data[ k  ] = imageData.data[ k+1 ] = imageData.data[ k+2 ] = 128
+        imageData.data[ k+3 ] = alpha
 
         // bot left
-        ctx.beginPath()
-        ctx.rect( _ox - x + _width2, _oy - y + _height2, 1, 1 )
-        ctx.fill()
+        k = k - y * 8 * imageData.width
+        imageData.data[ k  ] = imageData.data[ k+1 ] = imageData.data[ k+2 ] = 128
+        imageData.data[ k+3 ] = alpha
+
+        // bot left
+        k = k + x * 8
+        imageData.data[ k  ] = imageData.data[ k+1 ] = imageData.data[ k+2 ] = 128
+        imageData.data[ k+3 ] = alpha
+
     }
 
-    ctx.globalAlpha = 1
+    ctx.putImageData( imageData, _cx-_width2, _cy-_height2 )
+
 }
 
 /**
