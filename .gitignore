@@ -1,0 +1,11 @@
+node_modules
+npm-debug.log
+Thumbs.db
+.tmp
+tasks
+analyzerPlayer.js
+player.js
+beat.js
+blob.js
+app.js
+!build/app.js
