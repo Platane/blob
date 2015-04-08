@@ -1,6 +1,6 @@
 
 
-
+const degug = !true
 
 var computeThreshold = function( stickRadius, tau ){
     return gauss( 0, 0, tau, 0, stickRadius )
@@ -101,6 +101,17 @@ var drawJonction = function( ctx, dim, ox, oy, width, height, gaussOrigins, tau,
     let _cx = 0|(ox*dim.x) + _width2
     let _cy = 0|(oy*dim.y) + _height2
 
+
+    if( degug ){
+        ctx.save()
+        ctx.strokeStyle = 'rgb(220,100,30)'
+        ctx.lineWidth = 2
+        ctx.beginPath()
+        ctx.rect( _cx-_width2, _cy-_height2, _width2*2, _height2*2 )
+        ctx.stroke()
+        ctx.restore()
+    }
+
     // extract imageData
     let imageData = ctx.getImageData( _cx-_width2, _cy-_height2, _width2*2, _height2*2 )
 
@@ -114,22 +125,24 @@ var drawJonction = function( ctx, dim, ox, oy, width, height, gaussOrigins, tau,
         for( j=gaussOrigins.length; j--; )
             sum += gauss( 0, gaussOrigins[ j ] - _cy/dim.y, tau, x/dim.x, y/dim.y )
 
+        if( sum < threshold )
+            continue
 
-        let alpha = sum < threshold ? 0 : Math.min( Math.max( 0.75, (sum - threshold)*80 ), 1 )* 255
+        let alpha = Math.min( Math.max( 0.75, (sum - threshold)*80 ), 1 )* 255
 
         // top right
         k = (( _width2 + x ) + ( _height2 + y ) * imageData.width ) * 4
         imageData.data[ k   ] = color.r
         imageData.data[ k+1 ] = color.g
         imageData.data[ k+2 ] = color.b
-        imageData.data[ k+3 ] = alpha
+        imageData.data[ k+3 ] = Math.max( alpha, imageData.data[ k+3 ] )
 
         // top left
         k = k - x * 8
         imageData.data[ k   ] = color.r
         imageData.data[ k+1 ] = color.g
         imageData.data[ k+2 ] = color.b
-        imageData.data[ k+3 ] = alpha
+        imageData.data[ k+3 ] = Math.max( alpha, imageData.data[ k+3 ] )
 
         // bot left
         k = k - y * 8 * imageData.width
@@ -137,7 +150,7 @@ var drawJonction = function( ctx, dim, ox, oy, width, height, gaussOrigins, tau,
         imageData.data[ k   ] = color.r
         imageData.data[ k+1 ] = color.g
         imageData.data[ k+2 ] = color.b
-        imageData.data[ k+3 ] = alpha
+        imageData.data[ k+3 ] = Math.max( alpha, imageData.data[ k+3 ] )
 
         // bot left
         k = k + x * 8
@@ -145,7 +158,7 @@ var drawJonction = function( ctx, dim, ox, oy, width, height, gaussOrigins, tau,
         imageData.data[ k   ] = color.r
         imageData.data[ k+1 ] = color.g
         imageData.data[ k+2 ] = color.b
-        imageData.data[ k+3 ] = alpha
+        imageData.data[ k+3 ] = Math.max( alpha, imageData.data[ k+3 ] )
 
     }
 
@@ -183,8 +196,9 @@ var drawBlobyJonction = function( ctx, dim, stick, stickRadius, tau ){
 
 export function drawStick( ctx, dim, stick, stickRadius, tau ){
 
+    drawBodyStick( ctx, dim, stick, stickRadius )
+
     drawBlobyJonction( ctx, dim, stick, stickRadius, tau )
 
-    drawBodyStick( ctx, dim, stick, stickRadius )
 
 }

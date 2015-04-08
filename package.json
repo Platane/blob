@@ -10,7 +10,8 @@
         "browserify" : "*",
         "babelify" : "*",
         "express" : "*",
-        "fourier" : "*"
+        "fourier" : "*",
+        "color" : "*"
     },
 
     "engines": {
