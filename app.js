@@ -182,64 +182,45 @@ var drawC = (function(){
 
 
 import { drawStick } from './blob'
-var drawS = (function(){
+import Color from 'color'
+;(function(){
     var canvas = document.createElement( 'canvas' )
     canvas.setAttribute('id', 'blob')
     document.body.appendChild( canvas )
     var ctx = canvas.getContext( '2d' )
 
-    var tau = 0.058
-    var stickRadius = 0.051
-    var sticks = [
-        {
-            color: {
-                r: 92,
-                g: 188,
-                b: 106
-            },
-            cx: 0.5,
-            blob:[
-                { cy: 0.3, l:0.1 },
-                { cy: 0.5, l:0.023 },
-            ]
-        },
-        {
-            color: {
-                r: 138,
-                g: 201,
-                b: 123
-            },
-            cx: 0.35,
-            blob:[
-                { cy: 0.6, l:0.03 },
-                { cy: 0.5, l:0.02 },
-            ]
-        },
-        {
-            color: {
-                r: 144,
-                g: 196,
-                b: 218
-            },
-            cx: 0.65,
-            blob:[
-                { cy: 0.4, l:0.03 },
-                { cy: 0.5, l:0.01 },
-            ]
-        },
-        {
-            color: {
-                r: 33,
-                g: 164,
-                b: 208
-            },
-            cx: 0.80,
-            blob:[
-                { cy: 0.4, l:0.03 },
-                { cy: 0.5, l:0.01 },
-            ]
-        }
-    ]
+    let n = 6
+
+    var tau = 0.045
+    var stickRadius = 1/n*0.4 *0.8
+
+    let sticks = Array.apply(null, Array(n))
+        // for each value of a n length array, return the object
+        .map( ( _ , i ) => ({
+
+            // cx is the position horizontal
+            cx: (i+1)/(n+1),
+
+            // the color as constant value and saturation and hue grows along the index
+            color: Color().hsv( ((i/n) * 360 + 90) % 360, 90, 90 ).rgb(),
+
+            // the blob array is longuer and for an index close to the midle of the array
+            blob: Array.apply(null, Array( Math.ceil( (1-Math.abs(0.5-i/n))*4) ))
+
+                // return the object
+                .map( ( ) => ({
+
+                    // vertical position, random
+                    cy: Math.random()*0.6+0.3,
+
+                    // vertical length, random
+                    l: Math.random()*0.1
+                })
+                ),
+        })
+        )
+
+
 
 
     var h = canvas.height = 500
@@ -247,42 +228,67 @@ var drawS = (function(){
 
     let t=0
 
-    document.body.addEventListener( 'mousemove', function( event ){
-        var x = ( event.pageX * 1.3 -200 ) / window.innerWidth
-        sticks[ 3 ].blob[ 1 ].cy = 0.1 + x*0.8
-        sticks[ 1 ].blob[ 1 ].cy = 0.9 - x*0.6
-        sticks[ 2 ].blob[ 1 ].cy = 0.2 + x*0.8
+    // for each blob in each stick, create a function with custom param to animate randomly
+    let posFn = sticks.map( (s, i) =>
+            s.blob.map( function(){
+                    let y = (Math.random() -0.5) * 2 * (1-Math.abs(0.5-i/n)) * 0.4 + 0.5
+                    let A = ( Math.random() * 0.4 + 0.6 ) * (1-Math.abs(0.5-i/n)) * 0.3
+                    let w = 3.14 * 5 * ( Math.random() * 0.4 + 0.6 )
+                    let tau = 3.14 * 2 * Math.random()
 
-        drawS()
+                    // 0 < x < 1
+                    return function position( x ){
+                        return y + A * Math.sin(x*w+tau)
+                    }
+                })
+            )
+
+    document.body.addEventListener( 'mousemove', function( event ){
+        var x = event.pageX / window.innerWidth
+
+        sticks.forEach( ( s, i ) =>
+            s.blob.forEach( ( b , j )=>
+                b.cy = posFn[ i ][ j ]( x )
+            )
+        )
+
+
     })
 
-    return function( beat ){
+    let stats = {
+        begin: function(){},
+        end: function(){},
+    }
+    window.onload = function(){
+        if( window.Stats ){
+            stats = new window.Stats()
+            stats.domElement.style.position = 'absolute'
+            stats.domElement.style.right = '0px'
+            stats.domElement.style.bottom = '0px'
+            document.body.appendChild( stats.domElement )
+        }
+    }
+
+    let cycle = function(){
 
         t++
 
-        sticks[ 0 ].blob[ 0 ].l = Math.sin( t * 0.01 ) * 0.06 + 0.1
-        sticks[ 0 ].blob[ 0 ].cy = Math.sin( t * 0.07 ) * 0.1 + 0.5
+        //sticks[ 0 ].blob[ 0 ].l = Math.sin( t * 0.01 ) * 0.06 + 0.1
+        //sticks[ 0 ].blob[ 0 ].cy = Math.sin( t * 0.07 ) * 0.1 + 0.5
 
         ctx.clearRect( 0, 0, w, h )
+        stats.begin()
         for( let i = sticks.length; i--; )
             drawStick( ctx, {x: w, y: h}, sticks[ i ], stickRadius, tau )
+        stats.end()
 
+        window.requestAnimationFrame( cycle )
     }
+
+    cycle()
 })()
 
-let stats = {
-    begin: function(){},
-    end: function(){},
-}
-window.onload = function(){
-    if( window.Stats ){
-        stats = new Stats()
-        stats.domElement.style.position = 'absolute'
-        stats.domElement.style.right = '0px'
-        stats.domElement.style.bottom = '0px'
-        document.body.appendChild( stats.domElement )
-    }
-}
+
 
 var cycle = function(){
 
@@ -291,17 +297,9 @@ var cycle = function(){
         drawC( soundPlayer.beat )
         drawLk( soundPlayer.beat )
 
-        stats.begin()
-        drawS()
-        stats.end()
 
     }catch( e ){
         console.log( e.stack )
     }
     window.requestAnimationFrame( cycle )
 }
-
-
-
-
-drawS()
