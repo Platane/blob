@@ -270,13 +270,30 @@ var drawS = (function(){
     }
 })()
 
+let stats = {
+    begin: function(){},
+    end: function(){},
+}
+window.onload = function(){
+    if( window.Stats ){
+        stats = new Stats()
+        stats.domElement.style.position = 'absolute'
+        stats.domElement.style.right = '0px'
+        stats.domElement.style.bottom = '0px'
+        document.body.appendChild( stats.domElement )
+    }
+}
+
 var cycle = function(){
 
     try{
-    drawF( soundPlayer.beat )
-    drawC( soundPlayer.beat )
-    drawLk( soundPlayer.beat )
-    drawS()
+        drawF( soundPlayer.beat )
+        drawC( soundPlayer.beat )
+        drawLk( soundPlayer.beat )
+
+        stats.begin()
+        drawS()
+        stats.end()
 
     }catch( e ){
         console.log( e.stack )

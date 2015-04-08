@@ -158,7 +158,7 @@ var drawJonction = function( ctx, dim, ox, oy, width, height, gaussOrigins, tau,
  */
 var drawBlobyJonction = function( ctx, dim, stick, stickRadius, tau ){
 
-    var azone = computeActiveZone( stickRadius, tau, 0.005 )
+    var azone = computeActiveZone( stickRadius, tau, 0.03 )
 
     var blobs = stick.blob
 

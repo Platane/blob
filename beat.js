@@ -86,10 +86,14 @@ let nextBatch = function( buffer ){
 
     let bestChannel = this._windows[ 31 ]
 
+
     let img = []
     for( let i = bestChannel.length; i--; )
         img.push( 0 )
-    // /let r = fourier.fft( bestChannel, img )
+
+
+
+    //let r = fourier.fft( bestChannel, img )
 
 }
 
