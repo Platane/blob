@@ -179,21 +179,45 @@ var drawC = (function(){
     }
 })()
 
+// render loop of the charts
+var cycle = function(){
+
+    try{
+        drawF( soundPlayer.beat )
+        drawC( soundPlayer.beat )
+        drawLk( soundPlayer.beat )
+
+    }catch( e ){
+        console.log( e.stack )
+    }
+    window.requestAnimationFrame( cycle )
+}
 
 
+
+
+
+
+// stuff about the stick drawing
 import { drawStick } from './blob'
 import Color from 'color'
 ;(function(){
-    var canvas = document.createElement( 'canvas' )
-    canvas.setAttribute('id', 'blob')
-    document.body.appendChild( canvas )
-    var ctx = canvas.getContext( '2d' )
 
-    let n = 6
+    // some constant
 
-    var tau = 0.045
-    var stickRadius = 1/n*0.4 *0.8
+    // number of stick
+    const n = 6
 
+    // gooy value, larger value for larger goo area
+    const tau = 0.045
+
+    // the width of the stick ( set to fit best the screen, depending of the number of sticks )
+    const stickRadius = 1/n*0.4 *0.8
+
+
+
+
+    // instanciate the stick array
     let sticks = Array.apply(null, Array(n))
         // for each value of a n length array, return the object
         .map( ( _ , i ) => ({
@@ -221,12 +245,14 @@ import Color from 'color'
         )
 
 
-
-
+    // init the canvas
+    var canvas = document.createElement( 'canvas' )
+    canvas.setAttribute('id', 'blob')
+    document.body.appendChild( canvas )
+    var ctx = canvas.getContext( '2d' )
     var h = canvas.height = 500
     var w = canvas.width = 500
 
-    let t=0
 
     // for each blob in each stick, create a function with custom param to animate randomly
     let posFn = sticks.map( (s, i) =>
@@ -243,19 +269,22 @@ import Color from 'color'
                 })
             )
 
+    // mouse the blob on mousemove
     document.body.addEventListener( 'mousemove', function( event ){
-        var x = event.pageX / window.innerWidth
+        let x = event.pageX / window.innerWidth
 
+        // apply the position function for each blob
         sticks.forEach( ( s, i ) =>
             s.blob.forEach( ( b , j )=>
                 b.cy = posFn[ i ][ j ]( x )
             )
         )
-
-
     })
 
+
+    // track the fps ( with stat.js)
     let stats = {
+        // mock the object until the lib is loaded
         begin: function(){},
         end: function(){},
     }
@@ -269,37 +298,24 @@ import Color from 'color'
         }
     }
 
+    // animation loop
+    let t=0
     let cycle = function(){
 
         t++
 
-        //sticks[ 0 ].blob[ 0 ].l = Math.sin( t * 0.01 ) * 0.06 + 0.1
-        //sticks[ 0 ].blob[ 0 ].cy = Math.sin( t * 0.07 ) * 0.1 + 0.5
-
         ctx.clearRect( 0, 0, w, h )
+
+        // track the sticks redraw
         stats.begin()
         for( let i = sticks.length; i--; )
             drawStick( ctx, {x: w, y: h}, sticks[ i ], stickRadius, tau )
         stats.end()
 
+        // loop
         window.requestAnimationFrame( cycle )
     }
 
+    // start the loop
     cycle()
 })()
-
-
-
-var cycle = function(){
-
-    try{
-        drawF( soundPlayer.beat )
-        drawC( soundPlayer.beat )
-        drawLk( soundPlayer.beat )
-
-
-    }catch( e ){
-        console.log( e.stack )
-    }
-    window.requestAnimationFrame( cycle )
-}
