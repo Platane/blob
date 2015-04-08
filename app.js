@@ -188,11 +188,15 @@ var drawS = (function(){
     document.body.appendChild( canvas )
     var ctx = canvas.getContext( '2d' )
 
-    var tau = 0.056
+    var tau = 0.058
     var stickRadius = 0.051
     var sticks = [
         {
-            color: '#126392',
+            color: {
+                r: 92,
+                g: 188,
+                b: 106
+            },
             cx: 0.5,
             blob:[
                 { cy: 0.3, l:0.1 },
@@ -200,7 +204,11 @@ var drawS = (function(){
             ]
         },
         {
-            color: '#486ed1',
+            color: {
+                r: 138,
+                g: 201,
+                b: 123
+            },
             cx: 0.35,
             blob:[
                 { cy: 0.6, l:0.03 },
@@ -208,8 +216,24 @@ var drawS = (function(){
             ]
         },
         {
-            color: '#4ed153',
+            color: {
+                r: 144,
+                g: 196,
+                b: 218
+            },
             cx: 0.65,
+            blob:[
+                { cy: 0.4, l:0.03 },
+                { cy: 0.5, l:0.01 },
+            ]
+        },
+        {
+            color: {
+                r: 33,
+                g: 164,
+                b: 208
+            },
+            cx: 0.80,
             blob:[
                 { cy: 0.4, l:0.03 },
                 { cy: 0.5, l:0.01 },
@@ -218,22 +242,26 @@ var drawS = (function(){
     ]
 
 
-    var h = canvas.height = 150
-    var w = canvas.width = 150
+    var h = canvas.height = 500
+    var w = canvas.width = 500
 
     let t=0
 
-    return function( beat ){
+    document.body.addEventListener( 'mousemove', function( event ){
+        var x = ( event.pageX * 1.3 -200 ) / window.innerWidth
+        sticks[ 3 ].blob[ 1 ].cy = 0.1 + x*0.8
+        sticks[ 1 ].blob[ 1 ].cy = 0.9 - x*0.6
+        sticks[ 2 ].blob[ 1 ].cy = 0.2 + x*0.8
 
+        drawS()
+    })
+
+    return function( beat ){
 
         t++
 
         sticks[ 0 ].blob[ 0 ].l = Math.sin( t * 0.01 ) * 0.06 + 0.1
         sticks[ 0 ].blob[ 0 ].cy = Math.sin( t * 0.07 ) * 0.1 + 0.5
-
-        sticks[ 2 ].blob[ 0 ].cy = Math.sin( t * 0.05 ) * 0.15 + 0.7
-
-        sticks[ 1 ].blob[ 0 ].cy = Math.sin( t * 0.05 + 2.98 ) * 0.15 + 0.698
 
         ctx.clearRect( 0, 0, w, h )
         for( let i = sticks.length; i--; )
@@ -255,5 +283,8 @@ var cycle = function(){
     }
     window.requestAnimationFrame( cycle )
 }
+
+
+
 
 drawS()
