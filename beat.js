@@ -9,6 +9,9 @@ let defaultConfig = {
 
 }
 
+/**
+ * compute the average of the serie
+ */
 let average = function( arr, start=0, end=0 ){
     let sum = 0
     end = end || ( arr.length - start )
@@ -16,6 +19,10 @@ let average = function( arr, start=0, end=0 ){
         sum += arr[ i ]
     return sum / ( end-start )
 }
+
+/**
+* compute the variance of the serie
+*/
 let variance = function( arr, start=0, end=0 ){
     let e = 0
     let esquare = 0
@@ -30,6 +37,7 @@ let variance = function( arr, start=0, end=0 ){
 
     return esquare - e*e
 }
+
 /**
  * return a number which is bigger when the signal seems to look like following the expected period ( T )
  *

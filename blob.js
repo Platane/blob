@@ -1,16 +1,34 @@
 
-
+// enable to display some stuff
 const degug = !true
 
+/**
+ * compute the value k for which the blob looks like a circle ( with stickradius as radius ) for a given tau param
+ * meaning the point ( p ) for which gauss( p ) < k form a circle
+ *
+ * @private
+ */
 var computeThreshold = function( stickRadius, tau ){
     return gauss( 0, 0, tau, 0, stickRadius )
 }
+
+/**
+ * compute the minimal distance d of interaction between two blob
+ * meaning that if the distant between the two blob is lower that d, the blob does not form a perfect circle ( one influence the other )
+ *
+ * @private
+ *
+ * @param stickRadius   {number}    the radius of both blob when they are perfect circle
+ * @param tau           {number}    the tau param of both blob
+ * @param epsylon       {number}    if the variantion of the blob in inferior to this value, the blob is considered unchanged
+ *
+ */
 var computeActiveZone = function( stickRadius, tau, epsylon ){
     return Math.sqrt( - 2 * Math.log( epsylon ) * tau*tau ) + stickRadius
 }
 
 
-// gauss fonction
+// 2d gauss fonction
 var gauss = function( cx, cy, tau, x, y ){
 
     var xx = cx - x
@@ -22,6 +40,7 @@ var gauss = function( cx, cy, tau, x, y ){
 }
 
 
+// instanciate a canvas with a 2 gauss function drawn, in order to speed up gauss sum ( not used yet )
 let gaussBuffer = (function(){
     let fillGaussBuffer = function( imgData, tau ){
 
@@ -66,7 +85,7 @@ let gaussBuffer = (function(){
 
 
 /**
- * draw one blob
+ * draw one stick body
  */
 var drawOneBlob = function( ctx, dim, cx, cy, l, stickRadius ){
     ctx.beginPath()
@@ -82,7 +101,7 @@ var drawOneBlob = function( ctx, dim, cx, cy, l, stickRadius ){
 
 
 /**
- * draw all the blobs of the stick
+ * draw all the stick body
  */
 var drawBodyStick = function( ctx, dim, stick, stickRadius ){
     ctx.fillStyle = `rgb(${stick.color.r},${stick.color.g},${stick.color.b})`
@@ -168,6 +187,7 @@ var drawJonction = function( ctx, dim, ox, oy, width, height, gaussOrigins, tau,
 
 /**
  * draw all the jonctions between the blobs of the stick
+ * determine the zone where blob overlap and delegate to drawJonction for the resolution
  */
 var drawBlobyJonction = function( ctx, dim, stick, stickRadius, tau ){
 
@@ -199,6 +219,5 @@ export function drawStick( ctx, dim, stick, stickRadius, tau ){
     drawBodyStick( ctx, dim, stick, stickRadius )
 
     drawBlobyJonction( ctx, dim, stick, stickRadius, tau )
-
 
 }

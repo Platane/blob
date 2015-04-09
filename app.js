@@ -8,7 +8,7 @@ let soundPlayer = new AnalyzerPlayer()
 // create the file input
 ;(function(){
 
-    // TODO filter
+    // TODO filter file type
 
     // read the file as bufferArray
     let readFile = function( file ){
@@ -56,11 +56,17 @@ let soundPlayer = new AnalyzerPlayer()
 
 const key=31
 
+/**
+ * draw the instant frequencies on a canvas
+ *
+ * @param beat {beat} the beat object
+ */
 var drawF = (function(){
     var canvas = document.createElement( 'canvas' )
     canvas.setAttribute('id', 'freq')
     document.body.appendChild( canvas )
     var ctx = canvas.getContext( '2d' )
+
     return function( beat ){
         var w = canvas.width = 1024
         var h = canvas.height = 400
@@ -99,6 +105,11 @@ var drawF = (function(){
 })()
 
 
+/**
+ * ..
+ *
+ * @param beat {beat} the beat object
+ */
 var drawLk = (function(){
 
     var canvas = document.createElement( 'canvas' )
@@ -132,6 +143,12 @@ var drawLk = (function(){
     }
 })()
 
+
+/**
+ * draw the mean power over time, for a given constant
+ *
+ * @param beat {beat} the beat object
+ */
 var drawC = (function(){
     var canvas = document.createElement( 'canvas' )
     canvas.setAttribute('id', 'curve')
@@ -198,7 +215,8 @@ var cycle = function(){
 
 
 
-// stuff about the stick drawing
+
+// stuff about the bloby stick drawing
 import { drawStick } from './blob'
 import Color from 'color'
 ;(function(){
