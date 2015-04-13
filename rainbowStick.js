@@ -1,16 +1,18 @@
+/* jshint -W116, -E030 */
 import { drawStick } from './blob'
 import Color from 'color'
 
 // some constant
 
 // number of stick
-const n = 6
+const n = 1
 
 // gooy value, larger value for larger goo area
-const tau = 0.045
+// const tau = 0.045
+const tau = 0.065
 
 // the width of the stick ( set to fit best the screen, depending of the number of sticks )
-const stickRadius = 1/n*0.4 *0.8
+const stickRadius = 1/n*0.4 *0.8* 0.2
 
 
 
@@ -36,7 +38,7 @@ let sticks = Array.apply(null, Array(n))
                 cy: Math.random()*0.6+0.3,
 
                 // vertical length, random
-                l: Math.random()*0.1
+                l: Math.random()*0.01
             })
             ),
     })
@@ -48,8 +50,8 @@ var canvas = document.createElement( 'canvas' )
 canvas.setAttribute('id', 'blob')
 document.body.appendChild( canvas )
 var ctx = canvas.getContext( '2d' )
-var h = canvas.height = 100
-var w = canvas.width = 100
+var h = canvas.height = 500
+var w = canvas.width = 500
 
 
 // for each blob in each stick, create a function with custom param to animate randomly
