@@ -48,13 +48,13 @@ var gauss = function( cx, cy, tau, x, y ){
  */
 var drawOneBlob = function( ctx, dim, cx, cy, l, stickRadius ){
     ctx.beginPath()
-    // ctx.arc( cx*dim.x, (cy-l)*dim.y+1, stickRadius*dim.y, Math.PI, 0 )
+     ctx.arc( cx*dim.x, (cy-l)*dim.y+1, stickRadius*dim.y, Math.PI, 0 )
     ctx.fill()
     ctx.beginPath()
     ctx.rect( cx*dim.x-stickRadius*dim.x, (cy-l)*dim.y, stickRadius*2*dim.x, l*2*dim.y)
-    ctx.stroke()
+    ctx.fill()
     ctx.beginPath()
-    // ctx.arc( cx*dim.x, (cy+l)*dim.y-1, stickRadius*dim.y, 0, Math.PI )
+    ctx.arc( cx*dim.x, (cy+l)*dim.y-1, stickRadius*dim.y, 0, Math.PI )
     ctx.fill()
 }
 
@@ -74,10 +74,10 @@ var _ctx
 let computeGaussLine = (function(){
 
 
-    const phy=0.04
+    const phy=0.01
 
-
-    let first_t=phy*1.2
+    let first_t=phy
+    let min_t=phy/20
 
     let isInside = function( gaussx, gaussOrigins, tau, threshold, x, y ){
         let sum=0
@@ -91,25 +91,16 @@ let computeGaussLine = (function(){
 
         let t=first_t
         let alpha=1
-        while ( t>phy/40 ){
+        while ( t>min_t ){
 
             // is the point inside?
             // yes => alpha = 1
             // no => alpha = -1
             alpha = ( isInside( gaussx, gaussOrigins, tau, threshold, o.x, o.y ) << 1 )-1
 
-            _ctx.beginPath()
-            _ctx.arc( o.x*_dim.x, o.y*_dim.y, _dim.x*Math.sqrt(t)*0.05, 0, Math.PI*2 )
-            if ( isInside( gaussx, gaussOrigins, tau, threshold, o.x, o.y )){
-                _ctx.fillStyle='red'
-            }else{
-                _ctx.fillStyle='blue'
-            }
-            _ctx.fill()
-
-
-            o.x += alpha*t*v.x
-            o.y += alpha*t*v.y
+            alpha *= t
+            o.x += alpha*v.x
+            o.y += alpha*v.y
 
             t = t/2
         }
@@ -181,7 +172,9 @@ let computeGaussLine = (function(){
 
             last = points[ points.length-2 ]
 
-            if (points.length>3)
+            // shit happends
+            // TODO fix
+            if (points.length>100)
                 break
         }
 
@@ -192,26 +185,53 @@ let computeGaussLine = (function(){
 
 var drawJonction = function( ctx, dim, ox, oy, width, height, gaussOrigins, tau, color, threshold ){
 
-    _dim = dim
-    _ctx = ctx
+    let points = computeGaussLine( ox, oy, width, height, gaussOrigins, tau, threshold )
 
-    var points = computeGaussLine( ox, oy, width, height, gaussOrigins, tau, threshold )
-
-    var pointss = [
-        {x:0, y:0},
-        {x:0.5, y:0},
-        {x:0.7, y:0.4},
-        {x:0.8, y:0.4},
-    ]
+    let c = {
+        x: ox+width/2,
+        y: oy+height/2
+    }
+    let line = function(e){
+        ctx.lineTo( e.x-c.x, e.y-c.y ) }
 
     ctx.save()
-    // ctx.scale( dim.x, dim.y )
+    ctx.fillStyle=`rgb(${color.r},${color.g},${color.b})`
+
+
+    ctx.scale( dim.x, dim.y )
+    ctx.translate( c.x, c.y )
+    // TODO clip
+    // ctx.clip( o.x, o.y, width, height )
+
     ctx.beginPath()
-    points.forEach(function(e, i){
-        ctx[ i==0 ? 'moveTo' : 'lineTo' ]( e.x*dim.x, e.y*dim.y )
-    })
-    ctx.strokeStyle=`rgb(${color.r},${color.g},${color.b})`
-    ctx.stroke()
+    ctx.moveTo( 0, -height/2 )
+    points.forEach(line)
+    ctx.lineTo( 0, 0 )
+    ctx.fill()
+
+    ctx.scale( 1, -1 )
+    ctx.beginPath()
+    ctx.moveTo( 0, -height/2 )
+    points.forEach(line)
+    ctx.lineTo( 0, 0 )
+    ctx.fill()
+
+    ctx.scale( -1, 1 )
+    ctx.beginPath()
+    ctx.moveTo( 0, -height/2 )
+    points.forEach(line)
+    ctx.lineTo( 0, 0 )
+    ctx.fill()
+
+    ctx.scale( 1, -1 )
+    ctx.beginPath()
+    ctx.moveTo( 0, -height/2 )
+    points.forEach(line)
+    ctx.lineTo( 0, 0 )
+    ctx.fill()
+
+
+
     ctx.restore()
 
 }
@@ -222,7 +242,7 @@ var drawJonction = function( ctx, dim, ox, oy, width, height, gaussOrigins, tau,
  */
 var drawBlobyJonction = function( ctx, dim, stick, stickRadius, tau ){
 
-    var azone = computeActiveZone( stickRadius, tau, 0.03 )
+    var azone = computeActiveZone( stickRadius, tau, 0.005 )
 
     var blobs = stick.blob
 
