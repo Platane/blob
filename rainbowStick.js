@@ -4,13 +4,13 @@ import Color from 'color'
 // some constant
 
 // number of stick
-const n = 6
+const n = 1
 
 // gooy value, larger value for larger goo area
 const tau = 0.045
 
 // the width of the stick ( set to fit best the screen, depending of the number of sticks )
-const stickRadius = 1/n*0.4 *0.8
+const stickRadius = 1/n*0.4 *0.3
 
 
 
@@ -48,8 +48,8 @@ var canvas = document.createElement( 'canvas' )
 canvas.setAttribute('id', 'blob')
 document.body.appendChild( canvas )
 var ctx = canvas.getContext( '2d' )
-var h = canvas.height = 100
-var w = canvas.width = 100
+var h = canvas.height = 500
+var w = canvas.width = 500
 
 
 // for each blob in each stick, create a function with custom param to animate randomly
@@ -70,6 +70,9 @@ let posFn = sticks.map( (s, i) =>
 // mouse the blob on mousemove
 document.body.addEventListener( 'mousemove', function( event ){
     let x = event.pageX / window.innerWidth
+
+    sticks[0].blob[0].cy = x
+    return
 
     // apply the position function for each blob
     sticks.forEach( ( s, i ) =>

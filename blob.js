@@ -1,3 +1,5 @@
+var u=require('./point')
+
 
 // enable to display some stuff
 const degug = !true
@@ -40,62 +42,19 @@ var gauss = function( cx, cy, tau, x, y ){
 }
 
 
-// instanciate a canvas with a 2 gauss function drawn, in order to speed up gauss sum ( not used yet )
-let gaussBuffer = (function(){
-    let fillGaussBuffer = function( imgData, tau ){
-
-        let data = imgData.data
-
-        let k, x, y
-
-        for( x=imgData.width; x--; )
-        for( y=imgData.height; y--; ){
-
-            k = ( x*imgData.height + y )<<2
-
-            data[ k   ] = data[ k+1 ] = data[ k+2 ] = 0
-            data[ k+3 ] = gauss( 0, 0, tau, x, y ) * 255
-        }
-    }
-    let prepareGaussBuffer = function( _canvas ){
-
-        let canvas = _canvas || document.createElement( 'canvas' )
-        let w = canvas.width = canvas.height = 100
-
-        let epsylon = 0.01
-        let tau = w / Math.sqrt( - 2 * Math.log( epsylon ) )
-
-
-        let ctx = canvas.getContext('2d')
-
-        let id = ctx.getImageData( 0, 0, w, w )
-
-        fillGaussBuffer( id, tau )
-
-        ctx.putImageData( id, 0, 0 )
-
-        return { canvas: canvas, tau: tau, w: w }
-    }
-
-    return prepareGaussBuffer(  )
-})()
-
-
-
-
 
 /**
  * draw one stick body
  */
 var drawOneBlob = function( ctx, dim, cx, cy, l, stickRadius ){
     ctx.beginPath()
-    ctx.arc( cx*dim.x, (cy-l)*dim.y+1, stickRadius*dim.y, Math.PI, 0 )
+    // ctx.arc( cx*dim.x, (cy-l)*dim.y+1, stickRadius*dim.y, Math.PI, 0 )
     ctx.fill()
     ctx.beginPath()
     ctx.rect( cx*dim.x-stickRadius*dim.x, (cy-l)*dim.y, stickRadius*2*dim.x, l*2*dim.y)
-    ctx.fill()
+    ctx.stroke()
     ctx.beginPath()
-    ctx.arc( cx*dim.x, (cy+l)*dim.y-1, stickRadius*dim.y, 0, Math.PI )
+    // ctx.arc( cx*dim.x, (cy+l)*dim.y-1, stickRadius*dim.y, 0, Math.PI )
     ctx.fill()
 }
 
@@ -110,78 +69,150 @@ var drawBodyStick = function( ctx, dim, stick, stickRadius ){
         drawOneBlob( ctx, dim, stick.cx, stick.blob[ i ].cy, stick.blob[ i ].l, stickRadius )
 }
 
+var _dim
+var _ctx
+let computeGaussLine = (function(){
+
+
+    const phy=0.04
+
+
+    let first_t=phy*1.2
+
+    let isInside = function( gaussx, gaussOrigins, tau, threshold, x, y ){
+        let sum=0
+        for(var k=gaussOrigins.length; k--;)
+            sum+=gauss( gaussx, gaussOrigins[k], tau, x, y )
+        return !(sum / threshold << 0 )
+    }
+
+    // the point at the threshold value on the line o +t*v
+    let pointOnTheshold = function( o, v, gaussx, gaussOrigins, tau, threshold ){
+
+        let t=first_t
+        let alpha=1
+        while ( t>phy/40 ){
+
+            // is the point inside?
+            // yes => alpha = 1
+            // no => alpha = -1
+            alpha = ( isInside( gaussx, gaussOrigins, tau, threshold, o.x, o.y ) << 1 )-1
+
+            _ctx.beginPath()
+            _ctx.arc( o.x*_dim.x, o.y*_dim.y, _dim.x*Math.sqrt(t)*0.05, 0, Math.PI*2 )
+            if ( isInside( gaussx, gaussOrigins, tau, threshold, o.x, o.y )){
+                _ctx.fillStyle='red'
+            }else{
+                _ctx.fillStyle='blue'
+            }
+            _ctx.fill()
+
+
+            o.x += alpha*t*v.x
+            o.y += alpha*t*v.y
+
+            t = t/2
+        }
+    }
+
+    return function( ox, oy, width, height, gaussOrigins, tau, threshold ){
+
+
+        //                        /
+        //                   /
+        //               3
+        //            /
+        //         /
+        //       2
+        //      /
+        //     /
+        //    1-------------------------x
+        //    (ox, oy)                 (ox+width/2, gaussOrigins[0]=oy)
+
+
+        let gaussx = ox+width/2
+
+
+        let points=[]
+
+
+        let e={x:0, y:0}
+        let last={x:0, y:0}
+        let v={x:0, y:0}
+
+        // first point
+        e.x=ox
+        e.y=oy
+        points.push({ x:e.x, y:e.y })
+
+        // in order to have the first tangete set as ...
+        last.x=e.x-0.5
+        last.y=e.y-0.5
+
+
+        // limit
+        let limit={
+            x:ox+width/2,
+            y:oy+height/2,
+        }
+
+        // iterate
+        while( e.x<limit.x && e.y<limit.y ){
+
+            // compute the next v
+            v.x=e.x-last.x
+            v.y=e.y-last.y
+            u.normalize(v)
+
+            // compute the next o position
+            e.x=e.x+v.x*phy
+            e.y=e.y+v.y*phy
+
+            // compute the next tangente
+            let tmp = v.y
+            v.y = -v.x
+            v.x = tmp
+
+            // find the new point on threshold
+            pointOnTheshold( e, v, gaussx, gaussOrigins, tau, threshold )
+
+            // add it to the line
+            points.push({ x:e.x, y:e.y })
+
+            last = points[ points.length-2 ]
+
+            if (points.length>3)
+                break
+        }
+
+
+        return points
+    }
+})()
 
 var drawJonction = function( ctx, dim, ox, oy, width, height, gaussOrigins, tau, color, threshold ){
 
+    _dim = dim
+    _ctx = ctx
 
-    let _width2 = ((width*dim.x)>>1 ) +1
-    let _height2 = ((height*dim.y)>>1 ) +1
+    var points = computeGaussLine( ox, oy, width, height, gaussOrigins, tau, threshold )
 
-    let _cx = 0|(ox*dim.x) + _width2
-    let _cy = 0|(oy*dim.y) + _height2
+    var pointss = [
+        {x:0, y:0},
+        {x:0.5, y:0},
+        {x:0.7, y:0.4},
+        {x:0.8, y:0.4},
+    ]
 
-
-    if( degug ){
-        ctx.save()
-        ctx.strokeStyle = 'rgb(220,100,30)'
-        ctx.lineWidth = 2
-        ctx.beginPath()
-        ctx.rect( _cx-_width2, _cy-_height2, _width2*2, _height2*2 )
-        ctx.stroke()
-        ctx.restore()
-    }
-
-    // extract imageData
-    let imageData = ctx.getImageData( _cx-_width2, _cy-_height2, _width2*2, _height2*2 )
-
-    let x, y, sum, k, j
-
-    for( x=0; x<_width2; x++ )
-    for( y=0; y<_height2; y++ )
-    {
-        sum = 0
-
-        for( j=gaussOrigins.length; j--; )
-            sum += gauss( 0, gaussOrigins[ j ] - _cy/dim.y, tau, x/dim.x, y/dim.y )
-
-        if( sum < threshold )
-            continue
-
-        let alpha = Math.min( Math.max( 0.75, (sum - threshold)*80 ), 1 )* 255
-
-        // top right
-        k = (( _width2 + x ) + ( _height2 + y ) * imageData.width ) * 4
-        imageData.data[ k   ] = color.r
-        imageData.data[ k+1 ] = color.g
-        imageData.data[ k+2 ] = color.b
-        imageData.data[ k+3 ] = Math.max( alpha, imageData.data[ k+3 ] )
-
-        // top left
-        k = k - x * 8
-        imageData.data[ k   ] = color.r
-        imageData.data[ k+1 ] = color.g
-        imageData.data[ k+2 ] = color.b
-        imageData.data[ k+3 ] = Math.max( alpha, imageData.data[ k+3 ] )
-
-        // bot left
-        k = k - y * 8 * imageData.width
-        imageData.data[ k  ] = imageData.data[ k+1 ] = imageData.data[ k+2 ] = 128
-        imageData.data[ k   ] = color.r
-        imageData.data[ k+1 ] = color.g
-        imageData.data[ k+2 ] = color.b
-        imageData.data[ k+3 ] = Math.max( alpha, imageData.data[ k+3 ] )
-
-        // bot left
-        k = k + x * 8
-        imageData.data[ k  ] = imageData.data[ k+1 ] = imageData.data[ k+2 ] = 128
-        imageData.data[ k   ] = color.r
-        imageData.data[ k+1 ] = color.g
-        imageData.data[ k+2 ] = color.b
-        imageData.data[ k+3 ] = Math.max( alpha, imageData.data[ k+3 ] )
-
-    }
-
-    ctx.putImageData( imageData, _cx-_width2, _cy-_height2 )
+    ctx.save()
+    // ctx.scale( dim.x, dim.y )
+    ctx.beginPath()
+    points.forEach(function(e, i){
+        ctx[ i==0 ? 'moveTo' : 'lineTo' ]( e.x*dim.x, e.y*dim.y )
+    })
+    ctx.strokeStyle=`rgb(${color.r},${color.g},${color.b})`
+    ctx.stroke()
+    ctx.restore()
 
 }
 
