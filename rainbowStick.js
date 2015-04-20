@@ -10,7 +10,7 @@ const n = 1
 const tau = 0.045
 
 // the width of the stick ( set to fit best the screen, depending of the number of sticks )
-const stickRadius = 1/n*0.4 *0.3
+const stickRadius = 1/n*0.4 *0.5
 
 
 
@@ -48,8 +48,8 @@ var canvas = document.createElement( 'canvas' )
 canvas.setAttribute('id', 'blob')
 document.body.appendChild( canvas )
 var ctx = canvas.getContext( '2d' )
-var h = canvas.height = 500
-var w = canvas.width = 500
+var h = canvas.height = 800
+var w = canvas.width = 800
 
 
 // for each blob in each stick, create a function with custom param to animate randomly
@@ -71,8 +71,9 @@ let posFn = sticks.map( (s, i) =>
 document.body.addEventListener( 'mousemove', function( event ){
     let x = event.pageX / window.innerWidth
 
-    sticks[0].blob[0].cy = x
-    return
+
+    return sticks[0].blob[0].cy = x
+
 
     // apply the position function for each blob
     sticks.forEach( ( s, i ) =>
