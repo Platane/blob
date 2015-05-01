@@ -4,8 +4,11 @@ var u=require('./point')
 // enable to display some stuff
 const debug = window && window.location && window.location.search.match(/debug/)
 
-
+// used to compute the minimal distance for which the blob are different from two circles
 const epsylon = 0.002
+
+// used for numerical approximation
+const precision = 0.002
 
 /**
  * compute the value k for which the blob looks like a circle ( with stickradius as radius ) for a given tau param
@@ -281,11 +284,13 @@ var drawJonction = function( ctx, dim, ox, oy, width, height, gaussOrigins, tau,
     if (last.x<c.x)
         points.push({
             x: last.x,
-            y: c.y+epsylon
+            y: c.y+precision
         },{
-            x: c.x,
-            y: c.y+epsylon
+            x: c.x+precision,
+            y: c.y+precision
         })
+    else
+        last.x += precision
 
     if ( debug ){
         ctx.beginPath()
@@ -301,7 +306,7 @@ var drawJonction = function( ctx, dim, ox, oy, width, height, gaussOrigins, tau,
 
 
     ctx.beginPath()
-    ctx.moveTo( -epsylon, -height/2 )
+    ctx.moveTo( -precision, -height/2 )
     points.forEach(line)
     ctx.fill()
 
@@ -321,19 +326,19 @@ var drawJonction = function( ctx, dim, ox, oy, width, height, gaussOrigins, tau,
 
     ctx.scale( 1, -1 )
     ctx.beginPath()
-    ctx.moveTo( -epsylon, -height/2 )
+    ctx.moveTo( -precision, -height/2 )
     points.forEach(line)
     ctx.fill()
 
     ctx.scale( -1, 1 )
     ctx.beginPath()
-    ctx.moveTo( -epsylon, -height/2 )
+    ctx.moveTo( -precision, -height/2 )
     points.forEach(line)
     ctx.fill()
 
     ctx.scale( 1, -1 )
     ctx.beginPath()
-    ctx.moveTo( -epsylon, -height/2 )
+    ctx.moveTo( -precision, -height/2 )
     points.forEach(line)
     ctx.fill()
 
