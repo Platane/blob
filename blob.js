@@ -7,8 +7,6 @@ const debug = window && window.location && window.location.search.match(/debug/)
 // used to compute the minimal distance for which the blob are different from two circles
 const epsylon = 0.002
 
-// used for numerical approximation
-const precision = 0.002
 
 /**
  * compute the value k for which the blob looks like a circle ( with stickradius as radius ) for a given tau param
@@ -176,7 +174,7 @@ let computeGaussLine = (function(){
 
         // first v
         v.x=0.5
-        v.y=0.5
+        v.y=0.7
         u.normalize(v)
 
         // limit of the quarter, break when the limit is exceed
@@ -210,10 +208,10 @@ let computeGaussLine = (function(){
 
             n=u.norme( tmp_v )
 
-            if (n>phy*1.5){
+            if (n>phy*1.6){
                 // point is too far from the last
                 // retry with a smaller phy
-                // the 1.5 const is set to be greater that sqrt(2), so it accept a angle deviation of pi/4
+                // the 1.6 const is set to be greater that sqrt(2), so it accept a angle deviation of pi/4
                 phy /= 2
                 continue
             }
@@ -278,6 +276,8 @@ var drawJonction = function( ctx, dim, ox, oy, width, height, gaussOrigins, tau,
 
     let points = computeGaussLine( ox, oy, width, height, gaussOrigins, tau, threshold )
 
+    // used for rasterization approximation in context draw
+    let precision = 0.5/dim.x;
 
     // complete the path
     let last = points[points.length-1]
@@ -298,6 +298,11 @@ var drawJonction = function( ctx, dim, ox, oy, width, height, gaussOrigins, tau,
         ctx.lineWidth=1/dim.x
         ctx.stroke()
     }
+
+    // clip
+    ctx.beginPath()
+    ctx.rect( ox, oy, width, height )
+    ctx.clip()
 
     ctx.translate( c.x, c.y )
 

@@ -4,15 +4,15 @@ import Color from 'color'
 // some constant
 
 // number of stick
-const n = 6
+let n = 20
 
 // gooy value, larger value for larger goo area
 const tau = 0.045
 
 // the width of the stick ( set to fit best the screen, depending of the number of sticks )
-const stickRadius = 1/n*0.4 *0.8
+const stickRadius = 1/n*0.4 *0.9
 
-
+n=1
 
 
 // instanciate the stick array
@@ -27,7 +27,7 @@ let sticks = Array.apply(null, Array(n))
         color: Color().hsv( ((i/n) * 360 + 90) % 360, 90, 90 ).rgb(),
 
         // the blob array is longuer and for an index close to the midle of the array
-        blob: Array.apply(null, Array( Math.ceil( (1-Math.abs(0.5-i/n))*4) ))
+        blob: Array.apply(null, Array( Math.floor( 2+(0.5-Math.abs(0.5-i/n))*8) ))
 
             // return the object
             .map( ( ) => ({
@@ -36,7 +36,7 @@ let sticks = Array.apply(null, Array(n))
                 cy: Math.random()*0.6+0.3,
 
                 // vertical length, random
-                l: Math.random()*0.1
+                l: Math.random()*(0.5-Math.abs(0.5-i/n))*0.1
             })
             ),
     })
@@ -48,8 +48,8 @@ var canvas = document.createElement( 'canvas' )
 canvas.setAttribute('id', 'blob')
 document.body.appendChild( canvas )
 var ctx = canvas.getContext( '2d' )
-var h = canvas.height = 800
-var w = canvas.width = 800
+var h = canvas.height = 1500
+var w = canvas.width = 1500
 
 
 // for each blob in each stick, create a function with custom param to animate randomly
@@ -57,7 +57,7 @@ let posFn = sticks.map( (s, i) =>
         s.blob.map( function(){
                 let y = (Math.random() -0.5) * 2 * (1-Math.abs(0.5-i/n)) * 0.4 + 0.5
                 let A = ( Math.random() * 0.4 + 0.6 ) * (1-Math.abs(0.5-i/n)) * 0.3
-                let w = 3.14 * 5 * ( Math.random() * 0.4 + 0.6 )
+                let w = 3.14 * 5 * ( Math.random() * 0.4 + 0.6 ) * 0.1
                 let tau = 3.14 * 2 * Math.random()
 
                 // 0 < x < 1
@@ -72,7 +72,7 @@ document.body.addEventListener( 'mousemove', function( event ){
     let x = event.pageX / window.innerWidth
 
 
-    // return sticks[0].blob[0].cy = x
+    return sticks[0].blob[0].cy = x
 
 
     // apply the position function for each blob
