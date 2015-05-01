@@ -2,10 +2,10 @@ var u=require('./point')
 
 
 // enable to display some stuff
-const degug = !true
+const debug = window && window.location && window.location.search.match(/debug/)
 
 
-const epsylon = 0.001
+const epsylon = 0.002
 
 /**
  * compute the value k for which the blob looks like a circle ( with stickradius as radius ) for a given tau param
@@ -51,13 +51,13 @@ var gauss = function( cx, cy, tau, x, y ){
  */
 var drawOneBlob = function( ctx, dim, cx, cy, l, stickRadius ){
     ctx.beginPath()
-    // ctx.arc( cx*dim.x, (cy-l)*dim.y+1, stickRadius*dim.y, Math.PI, 0 )
+    ctx.arc( cx*dim.x, (cy-l)*dim.y+1, stickRadius*dim.y, Math.PI, 0 )
     ctx.fill()
     ctx.beginPath()
     ctx.rect( cx*dim.x-stickRadius*dim.x, (cy-l)*dim.y, stickRadius*2*dim.x, l*2*dim.y)
     ctx.fill()
     ctx.beginPath()
-    // ctx.arc( cx*dim.x, (cy+l)*dim.y-1, stickRadius*dim.y, 0, Math.PI )
+    ctx.arc( cx*dim.x, (cy+l)*dim.y-1, stickRadius*dim.y, 0, Math.PI )
     ctx.fill()
 }
 
@@ -72,14 +72,17 @@ var drawBodyStick = function( ctx, dim, stick, stickRadius ){
         drawOneBlob( ctx, dim, stick.cx, stick.blob[ i ].cy, stick.blob[ i ].l, stickRadius )
 }
 
-var _stat = {
-    nPoint:0,
-    nPointMax:0,
-    nPointMin:0,
-    generation:0,
-}
+// for debug purpose
 var _dim
 var _ctx
+
+/**
+ * compute the line along the frontier between the inside/outise of the blobm for the top left quarter ( other can be found by symetry )
+ * use vectorial approch
+ *
+ * @return array of point
+ *
+ */
 let computeGaussLine = (function(){
 
 
@@ -93,6 +96,7 @@ let computeGaussLine = (function(){
     // the point at the threshold value on the line o +t*v
     let pointOnTheshold = function( o, v, gaussx, gaussOrigins, tau, threshold, phy ){
 
+        // use dichotomie to resolve t
 
 
         let t=phy
@@ -105,7 +109,6 @@ let computeGaussLine = (function(){
 
         while ( t>t_min ){
 
-
             inside = isInside( gaussx, gaussOrigins, tau, threshold, o.x, o.y )
 
             has_inside = has_inside || ( inside == true )
@@ -117,16 +120,6 @@ let computeGaussLine = (function(){
             alpha = ( inside << 1 )-1
 
 
-            _ctx.beginPath()
-            _ctx.arc( o.x, o.y, Math.sqrt(t)*0.03, 0, Math.PI*2 )
-            if ( isInside( gaussx, gaussOrigins, tau, threshold, o.x, o.y )){
-                _ctx.fillStyle='red'
-            }else{
-                _ctx.fillStyle='blue'
-            }
-            _ctx.fill()
-
-
             alpha *= t
             o.x += alpha*v.x
             o.y += alpha*v.y
@@ -136,12 +129,6 @@ let computeGaussLine = (function(){
 
         // may not be a solution
         // besauce is not inside a inside/outside intervalle
-        if ( !has_inside || !has_outside ){
-            _ctx.beginPath()
-            _ctx.arc( o.x, o.y, 0.001, 0, Math.PI*2 )
-            _ctx.fillStyle='purple'
-            _ctx.fill()
-        }
         return has_inside && has_outside
     }
 
@@ -160,11 +147,15 @@ let computeGaussLine = (function(){
         //    (ox, oy)                 (ox+width/2, gaussOrigins[0]=oy)
 
 
+        // phy is the estimated distance between two point,
+        // should be fonction of the with ( which is a fair estimation of the radius of the blob quarter )
         let phy=width*0.08
-        let phy_min=phy/8
+
+        // phy may be reduced because a valid solution was not found with a greater phy,
+        // when phy is smaller that this min value, stop trying and return the points already found
+        let phy_min=phy/4
 
         let gaussx = ox+width/2
-
 
         let points=[]
 
@@ -185,7 +176,7 @@ let computeGaussLine = (function(){
         v.y=0.5
         u.normalize(v)
 
-        // limit
+        // limit of the quarter, break when the limit is exceed
         let limit={
             x:ox+width/2,
             y:oy+height/2,
@@ -216,9 +207,10 @@ let computeGaussLine = (function(){
 
             n=u.norme( tmp_v )
 
-            if (n>phy*1.4){
+            if (n>phy*1.5){
                 // point is too far from the last
                 // retry with a smaller phy
+                // the 1.5 const is set to be greater that sqrt(2), so it accept a angle deviation of pi/4
                 phy /= 2
                 continue
             }
@@ -236,6 +228,31 @@ let computeGaussLine = (function(){
 
         }
 
+
+        // treat the last point so it does not ecxeed the quarter
+        if ( last.x>limit.x ){
+
+            // take the point where last, last-1 intersect x = limit.x
+
+            // v is still last-1  last
+            n= (last.x-limit.x)/v.x
+
+            last.x -= v.x*n
+            last.y -= v.y*n
+        }
+        if ( last.y>limit.y ){
+
+            // take the point where last, last-1 intersect y = limit.y
+
+            // v is still last-1  last
+            n= (last.y-limit.y)/v.y
+
+            last.x -= v.x*n
+            last.y -= v.y*n
+        }
+
+        points[points.length-1].x =last.x
+        points[points.length-1].y =last.y
 
         return points
     }
@@ -256,67 +273,67 @@ var drawJonction = function( ctx, dim, ox, oy, width, height, gaussOrigins, tau,
 
     ctx.scale( dim.x, dim.y )
 
-    // ctx.beginPath()
-    // ctx.rect( ox-0.001, oy-0.001, width+2*0.001, height+2*0.001 )
-    // ctx.fillStyle='#333'
-    // ctx.fill()
-
     let points = computeGaussLine( ox, oy, width, height, gaussOrigins, tau, threshold )
 
-    if (points[points.length-1].y<c.y)
-        points.push({
-            x: points[points.length-1].x,
-            y: c.y,
-        })
-    points.push(c)
 
-    ctx.beginPath()
-    ctx.rect( ox, oy, width, height )
-    ctx.clip()
+    // complete the path
+    let last = points[points.length-1]
+    if (last.x<c.x)
+        points.push({
+            x: last.x,
+            y: c.y+epsylon
+        },{
+            x: c.x,
+            y: c.y+epsylon
+        })
+
+    if ( debug ){
+        ctx.beginPath()
+        ctx.rect( ox, oy, width, height )
+        ctx.lineWidth=1/dim.x
+        ctx.stroke()
+    }
 
     ctx.translate( c.x, c.y )
 
 
-    // ctx.fillStyle=`rgb(${color.r},${color.g},${color.b})`
-    ctx.strokeStyle=`rgb(${color.r},${color.g},${color.b})`
-    ctx.lineWidth=1/dim.x
+    ctx.fillStyle=`rgb(${color.r},${color.g},${color.b})`
 
-    let endPoint={
-        x: 0,
-        y: points[ points.length-1 ].y-c.y
-    }
 
     ctx.beginPath()
-    ctx.moveTo( 0, -height/2 )
+    ctx.moveTo( -epsylon, -height/2 )
     points.forEach(line)
-    ctx.stroke()
+    ctx.fill()
 
-    for(var k=points.length; k--;){
-        ctx.beginPath()
-        ctx.arc(  points[k].x-c.x, points[k].y-c.y , 0.005, 0, Math.PI*2 )
-        ctx.fillStyle='orange'
-        ctx.fill()
+    if (debug){
+        ctx.save()
+        ctx.fillStyle='blue'
+        points.forEach(function(e){
+            ctx.beginPath()
+            ctx.arc(e.x-c.x, e.y-c.y, 1/dim.x*2, 0, Math.PI)
+            ctx.fill()
+        })
+        ctx.restore()
     }
 
-    return ctx.restore()
 
-
+    //return ctx.restore()
 
     ctx.scale( 1, -1 )
     ctx.beginPath()
-    ctx.moveTo( 0, -height/2 )
+    ctx.moveTo( -epsylon, -height/2 )
     points.forEach(line)
     ctx.fill()
 
     ctx.scale( -1, 1 )
     ctx.beginPath()
-    ctx.moveTo( 0, -height/2 )
+    ctx.moveTo( -epsylon, -height/2 )
     points.forEach(line)
     ctx.fill()
 
     ctx.scale( 1, -1 )
     ctx.beginPath()
-    ctx.moveTo( 0, -height/2 )
+    ctx.moveTo( -epsylon, -height/2 )
     points.forEach(line)
     ctx.fill()
 

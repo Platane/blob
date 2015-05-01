@@ -10,7 +10,7 @@ const n = 1
 const tau = 0.045
 
 // the width of the stick ( set to fit best the screen, depending of the number of sticks )
-const stickRadius = 1/n*0.4 *0.5
+const stickRadius = 1/n*0.4 *0.3
 
 
 
