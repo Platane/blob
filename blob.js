@@ -5,7 +5,8 @@ var u=require('./point')
 const debug = window && window.location && window.location.search.match(/debug/)
 
 // used to compute the minimal distance for which the blob are different from two circles
-const epsylon = 0.002
+const epsylon = 0.1
+const epsylonActiveZone = 0.01
 
 
 /**
@@ -94,19 +95,40 @@ let computeGaussLine = (function(){
         return !(sum / threshold << 0 )
     }
 
-    // the point at the threshold value on the line o +t*v
-    let pointOnTheshold = function( o, v, gaussx, gaussOrigins, tau, threshold, phy ){
+    /**
+     * pointOnTheshold - compute the point that on the intersection of a line and the border of the blob
+     *   use dichotomie, finda point inside, a point inside and reduce the intervalle
+     *   assuming the blob is formed by severals gauss function, each aligned horizontaly, each withe the same tau
+     *
+     *  the param phy is an aproximation of the distance,
+     *    notice that the algorithm will found the point only if the distance is in ] 0, 2 phy [
+     *
+     * @param {point} o                 a point of the line
+     * @param {point} v                 the director vector of the line
+     * @param {number} gaussx           the origin in x on the gauss functions
+     * @param {array of number} gaussx  all the origins in y of the gauss functions
+     * @param {number} tau              tau factor of the gauss functions
+     * @param {number} threshold        threshold of the blob, delimit the border
+     * @param {number} phy              unit which represent the aproximal distance t with o + t* v is the point
+     * @param {number} precision        unit which represent the precision interval, at the end, the point is found with a certain precision ( good practice to make it function of phy )
+     *
+     * @return {boolean}     true if the point have been found, Also at the end the __point is stored in the o value__
+     */
+    let pointOnTheshold = function( o, v, gaussx, gaussOrigins, tau, threshold, phy, precision ){
 
         // use dichotomie to resolve t
 
-
+        const t_min=precision
         let t=phy
-        let t_min=phy*0.02
 
         let alpha
         let inside
+
+        // to the algorithm to valid, it must found a point ouside, and a point inside,
+        // otherwise it can t be assumed that the point is solution
         let has_inside=false
         let has_outside=false
+
 
         while ( t>t_min ){
 
@@ -132,6 +154,72 @@ let computeGaussLine = (function(){
         // besauce is not inside a inside/outside intervalle
         return has_inside && has_outside
     }
+
+    if (debug)
+        pointOnTheshold = function( o, v, gaussx, gaussOrigins, tau, threshold, phy, precision ){
+
+            const t_min=precision
+            let t=phy
+
+            let alpha
+            let inside
+
+            let has_inside=false
+            let has_outside=false
+
+            let loopCounter=0
+
+
+            _ctx.lineWidth = 0.0001
+            _ctx.beginPath()
+            // _ctx.moveTo(0,0)
+            // _ctx.lineTo(0.1,0)
+            _ctx.moveTo(o.x -v.x*0.03, o.y -v.y*0.03)
+            _ctx.lineTo(o.x +v.x*0.03, o.y +v.y*0.03)
+            _ctx.stroke()
+
+
+            while ( t>t_min ){
+
+                inside = isInside( gaussx, gaussOrigins, tau, threshold, o.x, o.y )
+
+                _ctx.beginPath()
+                _ctx.arc( o.x, o.y, Math.sqrt(t)*0.02, 0, Math.PI*2 )
+                if ( inside ){
+                    _ctx.fillStyle='red'
+                }else{
+                    _ctx.fillStyle='blue'
+                }
+                _ctx.fill()
+
+
+                has_inside = has_inside || ( inside == true )
+                has_outside = has_outside || ( inside == false )
+
+                // is the point inside?
+                // yes => alpha = 1
+                // no => alpha = -1
+                alpha = ( inside << 1 )-1
+
+                alpha *= t
+                o.x += alpha*v.x
+                o.y += alpha*v.y
+
+                t = t/2
+
+                loopCounter ++
+            }
+
+            if ( !has_inside || !has_outside ){
+                _ctx.beginPath()
+                _ctx.arc( o.x, o.y, 0.001, 0, Math.PI*2 )
+                _ctx.fillStyle='purple'
+                _ctx.fill()
+            }
+
+            return has_inside && has_outside
+        }
+
 
     return function( ox, oy, width, height, gaussOrigins, tau, threshold ){
 
@@ -167,13 +255,28 @@ let computeGaussLine = (function(){
         let tmp_v={x:0, y:0}
         let n
 
-        // first point
+        // find the first point, it the first point on the border on the horizontal line
         last.x=ox
         last.y=oy
+        tmp_v.x=0
+        tmp_v.y=-1
+        pointOnTheshold( last, tmp_v, gaussx, gaussOrigins, tau, threshold, height/3, phy*0.02 )
+
+        if (last.y -oy > height/2 ) {
+
+            return [
+                { x: ox, y: oy },
+                { x: ox, y: oy+height/2 },
+            ]
+
+        }
+
+        // first point
+        points.push({ x:ox, y:oy })
         points.push({ x:last.x, y:last.y })
 
         // first v
-        v.x=0.5
+        v.x=0.2
         v.y=0.7
         u.normalize(v)
 
@@ -195,8 +298,7 @@ let computeGaussLine = (function(){
             tmp_v.y=-v.x
 
             // find the new point on threshold
-            if ( !pointOnTheshold( e, tmp_v, gaussx, gaussOrigins, tau, threshold, phy )){
-
+            if ( !pointOnTheshold( e, tmp_v, gaussx, gaussOrigins, tau, threshold, phy, phy*0.02 )){
                 // not found, retry with a smaller phy
                 phy /= 2
                 continue
@@ -261,6 +363,7 @@ let computeGaussLine = (function(){
 
 var drawJonction = function( ctx, dim, ox, oy, width, height, gaussOrigins, tau, color, threshold ){
 
+    // expose for debug
     _ctx = ctx
 
     let c = {
@@ -310,24 +413,29 @@ var drawJonction = function( ctx, dim, ox, oy, width, height, gaussOrigins, tau,
     ctx.fillStyle=`rgb(${color.r},${color.g},${color.b})`
 
 
+
+    if (debug){
+        ctx.save()
+        ctx.lineStyle='black'
+        ctx.lineWidth=0.5/dim.x
+
+        ctx.moveTo(width/2 -c.x, -c.y)
+        points.forEach(e =>
+            ctx.lineTo(e.x-c.x, e.y-c.y)
+        )
+        ctx.stroke()
+
+        ctx.restore()
+        return ctx.restore()
+    }
+
+
+
+
     ctx.beginPath()
     ctx.moveTo( -precision, -height/2 )
     points.forEach(line)
     ctx.fill()
-
-    if (debug){
-        ctx.save()
-        ctx.fillStyle='blue'
-        points.forEach(function(e){
-            ctx.beginPath()
-            ctx.arc(e.x-c.x, e.y-c.y, 1/dim.x*2, 0, Math.PI)
-            ctx.fill()
-        })
-        ctx.restore()
-    }
-
-
-    //return ctx.restore()
 
     ctx.scale( 1, -1 )
     ctx.beginPath()
@@ -359,7 +467,7 @@ var drawJonction = function( ctx, dim, ox, oy, width, height, gaussOrigins, tau,
  */
 var drawBlobyJonction = function( ctx, dim, stick, stickRadius, tau ){
 
-    var azone = computeActiveZone( stickRadius, tau, epsylon )
+    var azone = computeActiveZone( stickRadius, tau, epsylonActiveZone )
 
     var blobs = stick.blob
 
