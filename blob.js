@@ -122,83 +122,62 @@ var drawJonction = function( ctx, dim, ox, oy, width, height, gaussOrigins, tau,
 
 
     if( degug ){
-        ctx.clearRect( _cx-_width2+0.5, _cy-_height2+0.5, _width2*2, _height2*2 )
-
         ctx.save()
         ctx.strokeStyle = 'rgb(220,100,30)'
-        ctx.lineWidth = 1
+        ctx.lineWidth = 2
         ctx.beginPath()
-        ctx.rect( _cx-_width2+0.5, _cy-_height2+0.5, _width2*2, _height2*2 )
+        ctx.rect( _cx-_width2, _cy-_height2, _width2*2, _height2*2 )
         ctx.stroke()
         ctx.restore()
     }
 
-    var _o = {
-        x: ox*dim.x,
-        y: oy*dim.y
-    }
-    var _d = {
-        x: width/2*dim.x,
-        y: width/2*dim.y
-    }
-    var _h = height*dim.y
-
-    var r = (gaussBuffer.tau/gaussBuffer.w)/ tau /2
-
-    ctx.save()
-    ctx.translate( _o.x+_d.x, _o.y+_h  )
-
-    ctx.drawImage( gaussBuffer.canvas, 0, -_h, _d.x*r, _d.y*r  )
-
-    ctx.scale( 1,-1)
-    ctx.drawImage( gaussBuffer.canvas, 0, 0, _d.x*r, _d.y*r  )
-
-    ctx.restore()
-
-    // return
-
     // extract imageData
     let imageData = ctx.getImageData( _cx-_width2, _cy-_height2, _width2*2, _height2*2 )
 
-    let x, y, sum, k, j, alpha
-
-    let th = 255*threshold
+    let x, y, sum, k, j
 
     for( x=0; x<_width2; x++ )
     for( y=0; y<_height2; y++ )
     {
+        sum = 0
 
-        k = (( _width2 + x ) + ( _height2 + y ) * imageData.width ) * 4
+        for( j=gaussOrigins.length; j--; )
+            sum += gauss( 0, gaussOrigins[ j ] - _cy/dim.y, tau, x/dim.x, y/dim.y )
 
-        alpha = (0|imageData.data[ k+3 ] / th) * 255
+        if( sum < threshold )
+            continue
 
+        let alpha = Math.min( Math.max( 0.75, (sum - threshold)*80 ), 1 )* 255
 
         // top right
+        k = (( _width2 + x ) + ( _height2 + y ) * imageData.width ) * 4
         imageData.data[ k   ] = color.r
         imageData.data[ k+1 ] = color.g
         imageData.data[ k+2 ] = color.b
-        imageData.data[ k+3 ] = alpha
+        imageData.data[ k+3 ] = Math.max( alpha, imageData.data[ k+3 ] )
 
         // top left
         k = k - x * 8
         imageData.data[ k   ] = color.r
         imageData.data[ k+1 ] = color.g
         imageData.data[ k+2 ] = color.b
-        imageData.data[ k+3 ] = alpha
+        imageData.data[ k+3 ] = Math.max( alpha, imageData.data[ k+3 ] )
 
         // bot left
         k = k - y * 8 * imageData.width
+        imageData.data[ k  ] = imageData.data[ k+1 ] = imageData.data[ k+2 ] = 128
         imageData.data[ k   ] = color.r
         imageData.data[ k+1 ] = color.g
         imageData.data[ k+2 ] = color.b
-        imageData.data[ k+3 ] = alpha
+        imageData.data[ k+3 ] = Math.max( alpha, imageData.data[ k+3 ] )
 
         // bot left
         k = k + x * 8
+        imageData.data[ k  ] = imageData.data[ k+1 ] = imageData.data[ k+2 ] = 128
         imageData.data[ k   ] = color.r
         imageData.data[ k+1 ] = color.g
         imageData.data[ k+2 ] = color.b
-        imageData.data[ k+3 ] = alpha
+        imageData.data[ k+3 ] = Math.max( alpha, imageData.data[ k+3 ] )
 
     }
 
