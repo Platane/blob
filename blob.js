@@ -1,6 +1,13 @@
+var u=require('./point')
+
 
 // enable to display some stuff
-const degug = !true
+const debug = window && window.location && window.location.search.match(/debug/)
+
+// used to compute the minimal distance for which the blob are different from two circles
+const epsylon = 0.1
+const epsylonActiveZone = 0.005
+
 
 /**
  * compute the value k for which the blob looks like a circle ( with stickradius as radius ) for a given tau param
@@ -40,49 +47,6 @@ var gauss = function( cx, cy, tau, x, y ){
 }
 
 
-// instanciate a canvas with a 2 gauss function drawn, in order to speed up gauss sum ( not used yet )
-let gaussBuffer = (function(){
-    let fillGaussBuffer = function( imgData, tau ){
-
-        let data = imgData.data
-
-        let k, x, y
-
-        for( x=imgData.width; x--; )
-        for( y=imgData.height; y--; ){
-
-            k = ( x*imgData.height + y )<<2
-
-            data[ k   ] = data[ k+1 ] = data[ k+2 ] = 0
-            data[ k+3 ] = gauss( 0, 0, tau, x, y ) * 255
-        }
-    }
-    let prepareGaussBuffer = function( _canvas ){
-
-        let canvas = _canvas || document.createElement( 'canvas' )
-        let w = canvas.width = canvas.height = 100
-
-        let epsylon = 0.01
-        let tau = w / Math.sqrt( - 2 * Math.log( epsylon ) )
-
-
-        let ctx = canvas.getContext('2d')
-
-        let id = ctx.getImageData( 0, 0, w, w )
-
-        fillGaussBuffer( id, tau )
-
-        ctx.putImageData( id, 0, 0 )
-
-        return { canvas: canvas, tau: tau, w: w }
-    }
-
-    return prepareGaussBuffer(  )
-})()
-
-
-
-
 
 /**
  * draw one stick body
@@ -110,78 +74,390 @@ var drawBodyStick = function( ctx, dim, stick, stickRadius ){
         drawOneBlob( ctx, dim, stick.cx, stick.blob[ i ].cy, stick.blob[ i ].l, stickRadius )
 }
 
+// for debug purpose
+var _dim
+var _ctx
+
+/**
+ * compute the line along the frontier between the inside/outise of the blobm for the top left quarter ( other can be found by symetry )
+ * use vectorial approch
+ *
+ * @return array of point
+ *
+ */
+let computeGaussLine = (function(){
+
+
+    let isInside = function( gaussx, gaussOrigins, tau, threshold, x, y ){
+        let sum=0
+        for(var k=gaussOrigins.length; k--;)
+            sum+=gauss( gaussx, gaussOrigins[k], tau, x, y )
+        return !(sum / threshold << 0 )
+    }
+
+    /**
+     * pointOnTheshold - compute the point that on the intersection of a line and the border of the blob
+     *   use dichotomie, finda point inside, a point inside and reduce the intervalle
+     *   assuming the blob is formed by severals gauss function, each aligned horizontaly, each withe the same tau
+     *
+     *  the param phy is the intervalle of search,
+     *     the algorithm will found the point only if the distance is in ] -phy, phy [
+     *
+     * @param {point} o                 a point of the line
+     * @param {point} v                 the director vector of the line
+     * @param {number} gaussx           the origin in x on the gauss functions
+     * @param {array of number} gaussx  all the origins in y of the gauss functions
+     * @param {number} tau              tau factor of the gauss functions
+     * @param {number} threshold        threshold of the blob, delimit the border
+     * @param {number} phy              unit which represent the aproximal intervalle
+     * @param {number} precision        unit which represent the precision interval, at the end, the point is found with a certain precision ( good practice to make it function of phy )
+     *
+     * @return {boolean}     true if the point have been found, Also at the end the __point is stored in the o value__
+     */
+    let pointOnTheshold = function( o, v, gaussx, gaussOrigins, tau, threshold, phy, precision ){
+
+        // use dichotomie to resolve t
+
+        const t_min=precision
+        let t=phy
+
+        let alpha
+        let inside
+
+        // to the algorithm to valid, it must found a point ouside, and a point inside,
+        // otherwise it can t be assumed that the point is solution
+        let has_inside=false
+        let has_outside=false
+
+
+        while ( t>t_min ){
+
+            inside = isInside( gaussx, gaussOrigins, tau, threshold, o.x, o.y )
+
+            has_inside = has_inside || ( inside == true )
+            has_outside = has_outside || ( inside == false )
+
+            // is the point inside?
+            // yes => alpha = 1
+            // no => alpha = -1
+            alpha = ( inside << 1 )-1
+
+
+            alpha *= t
+            o.x += alpha*v.x
+            o.y += alpha*v.y
+
+            t = t/2
+        }
+
+        // may not be a solution
+        // besauce is not inside a inside/outside intervalle
+        return has_inside && has_outside
+    }
+
+    if (debug)
+        pointOnTheshold = function( o, v, gaussx, gaussOrigins, tau, threshold, phy, precision ){
+
+            const t_min=precision
+            let t=phy
+
+            let alpha
+            let inside
+
+            let has_inside=false
+            let has_outside=false
+
+            let loopCounter=0
+
+
+            _ctx.lineWidth = 0.0001
+            _ctx.beginPath()
+            _ctx.moveTo(o.x -v.x*0.03, o.y -v.y*0.03)
+            _ctx.lineTo(o.x +v.x*0.03, o.y +v.y*0.03)
+            _ctx.stroke()
+
+
+            while ( t>t_min ){
+
+                inside = isInside( gaussx, gaussOrigins, tau, threshold, o.x, o.y )
+
+                _ctx.beginPath()
+                _ctx.arc( o.x, o.y, Math.sqrt(t)*0.02, 0, Math.PI*2 )
+                if ( inside ){
+                    _ctx.fillStyle='red'
+                }else{
+                    _ctx.fillStyle='blue'
+                }
+                _ctx.fill()
+
+
+                has_inside = has_inside || ( inside == true )
+                has_outside = has_outside || ( inside == false )
+
+                // is the point inside?
+                // yes => alpha = 1
+                // no => alpha = -1
+                alpha = ( inside << 1 )-1
+
+                alpha *= t
+                o.x += alpha*v.x
+                o.y += alpha*v.y
+
+                t = t/2
+
+                loopCounter ++
+            }
+
+            if ( !has_inside || !has_outside ){
+                _ctx.beginPath()
+                _ctx.arc( o.x, o.y, 0.001, 0, Math.PI*2 )
+                _ctx.fillStyle='purple'
+                _ctx.fill()
+            }
+
+            return has_inside && has_outside
+        }
+
+
+    return function( ox, oy, width, height, gaussOrigins, tau, threshold ){
+
+
+        //                        /
+        //                   /
+        //               3
+        //            /
+        //         /
+        //       2
+        //      /
+        //     /
+        //    1-------------------------x
+        //    (ox, oy)                 (ox+width/2, gaussOrigins[0]=oy)
+
+
+        // phy is the estimated distance between two point,
+        // should be fonction of the with ( which is a fair estimation of the radius of the blob quarter )
+        let phy=width*0.08
+
+        // phy may be reduced because a valid solution was not found with a greater phy,
+        // when phy is smaller that this min value, stop trying and return the points already found
+        let phy_min=phy/4
+
+        let gaussx = ox+width/2
+
+        let points=[]
+
+
+        let e={x:0, y:0}
+        let last={x:0, y:0}
+        let v={x:0, y:0}
+        let tmp_v={x:0, y:0}
+        let n
+
+
+        // first point
+        points.push({ x:ox, y:oy })
+
+        // find the first point, it the first point on the border on the horizontal line
+        last.x=ox
+        last.y=oy
+        tmp_v.x=0
+        tmp_v.y=-1
+        let findOnInterval = pointOnTheshold( last, tmp_v, gaussx, gaussOrigins, tau, threshold, height/3.5, phy*0.02 )
+
+        // is the entire zone is inside the border ?
+        if ( !findOnInterval || last.y -oy > height/2 ) {
+
+            points.push({ x: ox, y: oy+height/2 })
+
+            return points
+        }
+
+
+        points.push({ x:last.x, y:last.y })
+
+        // first v
+        v.x=0.2
+        v.y=0.7
+        u.normalize(v)
+
+        // limit of the quarter, break when the limit is exceed
+        let limit={
+            x:ox+width/2,
+            y:oy+height/2,
+        }
+
+        // iterate
+        while( last.x<limit.x && last.y<limit.y && phy>phy_min ){
+
+            // compute the next o position
+            e.x=last.x+v.x*phy
+            e.y=last.y+v.y*phy
+
+            // compute the tangente
+            tmp_v.x= v.y
+            tmp_v.y=-v.x
+
+            // find the new point on threshold
+            if ( !pointOnTheshold( e, tmp_v, gaussx, gaussOrigins, tau, threshold, phy*0.7, phy*0.02 )){
+                // not found, retry with a smaller phy
+                phy /= 2
+                continue
+            }
+
+            // compute the next v
+            tmp_v.x=e.x-last.x
+            tmp_v.y=e.y-last.y
+
+            n=u.norme( tmp_v )
+
+            if (n>phy*1.6){
+                // point is too far from the last
+                // retry with a smaller phy
+                // the 1.6 const is set to be greater that sqrt(2), so it accept a angle deviation of pi/4
+                phy /= 2
+                continue
+            }
+
+
+            //prepare next loop
+            v.x=tmp_v.x/n
+            v.y=tmp_v.y/n
+
+            last.x=e.x
+            last.y=e.y
+
+            // add it to the line
+            points.push({ x:last.x, y:last.y })
+
+        }
+
+
+        // treat the last point so it does not ecxeed the quarter
+        if ( last.x>limit.x ){
+
+            // take the point where last, last-1 intersect x = limit.x
+
+            // v is still last-1  last
+            n= (last.x-limit.x)/v.x
+
+            last.x -= v.x*n
+            last.y -= v.y*n
+        }
+        if ( last.y>limit.y ){
+
+            // take the point where last, last-1 intersect y = limit.y
+
+            // v is still last-1  last
+            n= (last.y-limit.y)/v.y
+
+            last.x -= v.x*n
+            last.y -= v.y*n
+        }
+
+        points[points.length-1].x =last.x
+        points[points.length-1].y =last.y
+
+        return points
+    }
+})()
 
 var drawJonction = function( ctx, dim, ox, oy, width, height, gaussOrigins, tau, color, threshold ){
 
+    // expose for debug
+    _ctx = ctx
 
-    let _width2 = ((width*dim.x)>>1 ) +1
-    let _height2 = ((height*dim.y)>>1 ) +1
+    let c = {
+        x: ox+width/2,
+        y: oy+height/2
+    }
+    let line = function(e){
+        ctx.lineTo( e.x-c.x, e.y-c.y ) }
 
-    let _cx = 0|(ox*dim.x) + _width2
-    let _cy = 0|(oy*dim.y) + _height2
+    ctx.save()
 
+    ctx.scale( dim.x, dim.y )
 
-    if( degug ){
-        ctx.save()
-        ctx.strokeStyle = 'rgb(220,100,30)'
-        ctx.lineWidth = 2
+    let points = computeGaussLine( ox, oy, width, height, gaussOrigins, tau, threshold )
+
+    // used for rasterization approximation in context draw
+    let precision = 0.5/dim.x;
+
+    // complete the path
+    let last = points[points.length-1]
+    if (last.x<c.x)
+        points.push({
+            x: last.x,
+            y: c.y+precision
+        },{
+            x: c.x+precision,
+            y: c.y+precision
+        })
+    else
+        last.x += precision
+
+    if ( debug ){
         ctx.beginPath()
-        ctx.rect( _cx-_width2, _cy-_height2, _width2*2, _height2*2 )
+        ctx.rect( ox, oy, width, height )
+        ctx.lineWidth=1/dim.x
         ctx.stroke()
+    }
+
+    // clip
+    ctx.beginPath()
+    ctx.rect( ox, oy, width, height )
+    ctx.clip()
+
+    ctx.translate( c.x, c.y )
+
+
+    ctx.fillStyle=`rgb(${color.r},${color.g},${color.b})`
+
+
+
+    if (debug){
+        ctx.save()
+        ctx.lineStyle='black'
+        ctx.lineWidth=0.5/dim.x
+
+        ctx.moveTo(width/2 -c.x, -c.y)
+        points.forEach(e =>
+            ctx.lineTo(e.x-c.x, e.y-c.y)
+        )
+        ctx.stroke()
+
         ctx.restore()
+        return ctx.restore()
     }
 
-    // extract imageData
-    let imageData = ctx.getImageData( _cx-_width2, _cy-_height2, _width2*2, _height2*2 )
 
-    let x, y, sum, k, j
 
-    for( x=0; x<_width2; x++ )
-    for( y=0; y<_height2; y++ )
-    {
-        sum = 0
 
-        for( j=gaussOrigins.length; j--; )
-            sum += gauss( 0, gaussOrigins[ j ] - _cy/dim.y, tau, x/dim.x, y/dim.y )
+    ctx.beginPath()
+    ctx.moveTo( -precision, -height/2 )
+    points.forEach(line)
+    ctx.fill()
 
-        if( sum < threshold )
-            continue
+    ctx.scale( 1, -1 )
+    ctx.beginPath()
+    ctx.moveTo( -precision, -height/2 )
+    points.forEach(line)
+    ctx.fill()
 
-        let alpha = Math.min( Math.max( 0.75, (sum - threshold)*80 ), 1 )* 255
+    ctx.scale( -1, 1 )
+    ctx.beginPath()
+    ctx.moveTo( -precision, -height/2 )
+    points.forEach(line)
+    ctx.fill()
 
-        // top right
-        k = (( _width2 + x ) + ( _height2 + y ) * imageData.width ) * 4
-        imageData.data[ k   ] = color.r
-        imageData.data[ k+1 ] = color.g
-        imageData.data[ k+2 ] = color.b
-        imageData.data[ k+3 ] = Math.max( alpha, imageData.data[ k+3 ] )
+    ctx.scale( 1, -1 )
+    ctx.beginPath()
+    ctx.moveTo( -precision, -height/2 )
+    points.forEach(line)
+    ctx.fill()
 
-        // top left
-        k = k - x * 8
-        imageData.data[ k   ] = color.r
-        imageData.data[ k+1 ] = color.g
-        imageData.data[ k+2 ] = color.b
-        imageData.data[ k+3 ] = Math.max( alpha, imageData.data[ k+3 ] )
 
-        // bot left
-        k = k - y * 8 * imageData.width
-        imageData.data[ k  ] = imageData.data[ k+1 ] = imageData.data[ k+2 ] = 128
-        imageData.data[ k   ] = color.r
-        imageData.data[ k+1 ] = color.g
-        imageData.data[ k+2 ] = color.b
-        imageData.data[ k+3 ] = Math.max( alpha, imageData.data[ k+3 ] )
 
-        // bot left
-        k = k + x * 8
-        imageData.data[ k  ] = imageData.data[ k+1 ] = imageData.data[ k+2 ] = 128
-        imageData.data[ k   ] = color.r
-        imageData.data[ k+1 ] = color.g
-        imageData.data[ k+2 ] = color.b
-        imageData.data[ k+3 ] = Math.max( alpha, imageData.data[ k+3 ] )
-
-    }
-
-    ctx.putImageData( imageData, _cx-_width2, _cy-_height2 )
+    ctx.restore()
 
 }
 
@@ -191,7 +467,7 @@ var drawJonction = function( ctx, dim, ox, oy, width, height, gaussOrigins, tau,
  */
 var drawBlobyJonction = function( ctx, dim, stick, stickRadius, tau ){
 
-    var azone = computeActiveZone( stickRadius, tau, 0.03 )
+    var azone = computeActiveZone( stickRadius, tau, epsylonActiveZone )
 
     var blobs = stick.blob
 
