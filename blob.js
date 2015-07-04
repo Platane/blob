@@ -6,7 +6,7 @@ const debug = window && window.location && window.location.search.match(/debug/)
 
 // used to compute the minimal distance for which the blob are different from two circles
 const epsylon = 0.1
-const epsylonActiveZone = 0.01
+const epsylonActiveZone = 0.005
 
 
 /**
@@ -100,8 +100,8 @@ let computeGaussLine = (function(){
      *   use dichotomie, finda point inside, a point inside and reduce the intervalle
      *   assuming the blob is formed by severals gauss function, each aligned horizontaly, each withe the same tau
      *
-     *  the param phy is an aproximation of the distance,
-     *    notice that the algorithm will found the point only if the distance is in ] 0, 2 phy [
+     *  the param phy is the intervalle of search,
+     *     the algorithm will found the point only if the distance is in ] -phy, phy [
      *
      * @param {point} o                 a point of the line
      * @param {point} v                 the director vector of the line
@@ -109,7 +109,7 @@ let computeGaussLine = (function(){
      * @param {array of number} gaussx  all the origins in y of the gauss functions
      * @param {number} tau              tau factor of the gauss functions
      * @param {number} threshold        threshold of the blob, delimit the border
-     * @param {number} phy              unit which represent the aproximal distance t with o + t* v is the point
+     * @param {number} phy              unit which represent the aproximal intervalle
      * @param {number} precision        unit which represent the precision interval, at the end, the point is found with a certain precision ( good practice to make it function of phy )
      *
      * @return {boolean}     true if the point have been found, Also at the end the __point is stored in the o value__
@@ -172,8 +172,6 @@ let computeGaussLine = (function(){
 
             _ctx.lineWidth = 0.0001
             _ctx.beginPath()
-            // _ctx.moveTo(0,0)
-            // _ctx.lineTo(0.1,0)
             _ctx.moveTo(o.x -v.x*0.03, o.y -v.y*0.03)
             _ctx.lineTo(o.x +v.x*0.03, o.y +v.y*0.03)
             _ctx.stroke()
@@ -255,24 +253,26 @@ let computeGaussLine = (function(){
         let tmp_v={x:0, y:0}
         let n
 
+
+        // first point
+        points.push({ x:ox, y:oy })
+
         // find the first point, it the first point on the border on the horizontal line
         last.x=ox
         last.y=oy
         tmp_v.x=0
         tmp_v.y=-1
-        pointOnTheshold( last, tmp_v, gaussx, gaussOrigins, tau, threshold, height/3, phy*0.02 )
+        let findOnInterval = pointOnTheshold( last, tmp_v, gaussx, gaussOrigins, tau, threshold, height/3.5, phy*0.02 )
 
-        if (last.y -oy > height/2 ) {
+        // is the entire zone is inside the border ?
+        if ( !findOnInterval || last.y -oy > height/2 ) {
 
-            return [
-                { x: ox, y: oy },
-                { x: ox, y: oy+height/2 },
-            ]
+            points.push({ x: ox, y: oy+height/2 })
 
+            return points
         }
 
-        // first point
-        points.push({ x:ox, y:oy })
+
         points.push({ x:last.x, y:last.y })
 
         // first v
@@ -298,7 +298,7 @@ let computeGaussLine = (function(){
             tmp_v.y=-v.x
 
             // find the new point on threshold
-            if ( !pointOnTheshold( e, tmp_v, gaussx, gaussOrigins, tau, threshold, phy, phy*0.02 )){
+            if ( !pointOnTheshold( e, tmp_v, gaussx, gaussOrigins, tau, threshold, phy*0.7, phy*0.02 )){
                 // not found, retry with a smaller phy
                 phy /= 2
                 continue

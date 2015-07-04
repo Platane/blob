@@ -7,7 +7,7 @@ import Color from 'color'
 let n = 10
 
 // gooy value, larger value for larger goo area
-let tau = 0.045
+let tau = 0.03
 
 // the width of the stick ( set to fit best the screen, depending of the number of sticks )
 let stickRadius = 1/n*0.4 *0.9
@@ -75,7 +75,7 @@ document.body.addEventListener( 'mousemove', function( event ){
     let x = event.pageX / window.innerWidth
 
 
-    // return sticks[0].blob[0].cy = x + 0.2
+    return sticks[0].blob[0].cy = x + 0.2
 
 
     // apply the position function for each blob
