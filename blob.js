@@ -236,7 +236,7 @@ let computeGaussLine = (function(){
 
         // phy is the estimated distance between two point,
         // should be fonction of the with ( which is a fair estimation of the radius of the blob quarter )
-        let phy=width*0.08
+        let phy=width*0.1
 
         // phy may be reduced because a valid solution was not found with a greater phy,
         // when phy is smaller that this min value, stop trying and return the points already found

@@ -4,7 +4,7 @@ import Color from 'color'
 // some constant
 
 // number of stick
-let n = 10
+let n = 14
 
 // gooy value, larger value for larger goo area
 let tau = 0.03
